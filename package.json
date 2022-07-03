@@ -1,0 +1,39 @@
+{
+  "name": "advancedrpc",
+  "version": "1.0.0",
+  "description": "Fully customizable Discord Rich Presence for Cider",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rollup -c --environment NODE_ENV:production",
+    "start": "rollup -c -w --environment NODE_ENV:development",
+    "deploy": "yarn build && gh-pages -b main -d dist"
+  },
+  "author": "down-bad",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/cli": "^7.17.3",
+    "@babel/core": "^7.17.4",
+    "@babel/preset-env": "^7.16.11",
+    "@rollup/plugin-babel": "^5.3.1",
+    "@rollup/plugin-commonjs": "^21.0.2",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^13.1.3",
+    "electron": "^17.0.1",
+    "gh-pages": "^3.2.3",
+    "rollup": "^2.67.3",
+    "rollup-plugin-copy": "^3.4.0"
+  },
+  "dependencies": {
+    "discord-auto-rpc": "^1.0.17",
+    "dotenv": "^16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/down-bad/advanced-rpc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/down-bad/advanced-rpc/issues"
+  },
+  "homepage": "https://github.com/down-bad/advanced-rpc#readme"
+}
