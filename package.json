@@ -1,6 +1,6 @@
 {
   "name": "advancedrpc",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Fully customizable Discord Rich Presence for Cider",
   "main": "index.js",
   "scripts": {
