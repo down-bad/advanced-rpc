@@ -32,7 +32,7 @@ Vue.component("plugin.advancedrpc", {
 
     <div
       class="md-header-title ms-2"
-      v-show="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled"
+      v-show="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled"
     >
       Please disable Cider's Discord Rich Presence in
       {{$root.getLz('term.settings')}} >
@@ -58,7 +58,7 @@ Vue.component("plugin.advancedrpc", {
       </div>
 
       <div
-        :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled"
+        :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled"
       >
         <div class="md-option-line">
           <div class="md-option-segment">Enable AdvancedRPC</div>
@@ -81,10 +81,7 @@ Vue.component("plugin.advancedrpc", {
           </div>
         </div>
 
-        <div
-          class="md-option-line"
-          :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled || !settings.enabled"
-        >
+        <div class="md-option-line" :disabled="!settings.enabled">
           <div class="md-option-segment">Reload AdvancedRPC</div>
           <div class="md-option-segment md-option-segment_auto">
             <button class="md-btn" @click="reloadAdvancedRpc()">Reload</button>
@@ -100,7 +97,7 @@ Vue.component("plugin.advancedrpc", {
 
     <div
       class="settings-option-body"
-      :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled || !settings.enabled"
+      :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled || !settings.enabled"
     >
       <div class="md-option-line">
         <div class="md-option-segment">Show presence when playing</div>
@@ -148,7 +145,7 @@ Vue.component("plugin.advancedrpc", {
             <label>
               <select
                 class="md-select"
-                style="width: 180px"
+                style="width: 195px"
                 v-model="settings.play.timestamp"
               >
                 <option value="disabled">Off</option>
@@ -165,7 +162,7 @@ Vue.component("plugin.advancedrpc", {
             <label>
               <select
                 class="md-select"
-                style="width: 180px"
+                style="width: 195px"
                 v-model="settings.play.largeImage"
               >
                 <option value="disabled">Off</option>
@@ -313,7 +310,7 @@ Vue.component("plugin.advancedrpc", {
 
     <div
       class="settings-option-body"
-      :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled || !settings.enabled"
+      :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled || !settings.enabled"
     >
       <div class="md-option-line">
         <div class="md-option-segment">Show presence while on pause</div>
@@ -361,7 +358,7 @@ Vue.component("plugin.advancedrpc", {
             <label>
               <select
                 class="md-select"
-                style="width: 180px"
+                style="width: 195px"
                 v-model="settings.pause.largeImage"
               >
                 <option value="disabled">Off</option>
@@ -520,7 +517,6 @@ Vue.component("plugin.advancedrpc", {
     </div>
   </div>
 </div>
-
   `,
   data: () => ({
     settings: {
@@ -593,11 +589,13 @@ Vue.component("plugin.advancedrpc", {
       } catch {
         console.log(`[Plugin][${PLUGIN_NAME}] Error checking for updates.`);
       }
-      settings.latestVersion = latestVersion;
-      settings.installedVersion = installedVersion;
     }
 
-    if (settings) this.settings = settings;
+    if (settings) {
+      settings.latestVersion = latestVersion;
+      settings.installedVersion = installedVersion;
+      this.settings = settings;
+    }
   },
   methods: {
     reloadAdvancedRpc() {
