@@ -382,7 +382,7 @@ module.exports = class AdvancedRpcBackend {
         delete activity.buttons[1];
       }
 
-      activity.buttons = activity.buttons.filter(item => item);
+      activity.buttons = activity.buttons.filter((item) => item);
     }
 
     // Check large image
@@ -412,7 +412,11 @@ module.exports = class AdvancedRpcBackend {
     if (!activity.details) delete activity.details;
     if (!activity.state) delete activity.state;
     if (!activity.largeImageText) delete activity.largeImageText;
+    if (activity.largeImageText?.length === 1)
+      activity.largeImageText = ` ${activity.largeImageText} `;
     if (!activity.smallImageText) delete activity.smallImageText;
+    if (activity.smallImageText?.length === 1)
+      activity.smallImageText = ` ${activity.smallImageText} `;
     if (activity.buttons?.length === 0) delete activity.buttons;
 
     return activity;
