@@ -1,5 +1,6 @@
 const PLUGIN_NAME = "AdvancedRPC";
 const SETTINGS_KEY = "settings";
+const { version } = require("./package.json");
 
 function getLocalStorage() {
   try {
@@ -18,7 +19,8 @@ function updateLocalStorage(data) {
   );
 }
 
-let version = 0;
+let installedVersion = version,
+  latestVersion = undefined;
 
 Vue.component("plugin.advancedrpc", {
   template: `
@@ -27,45 +29,66 @@ Vue.component("plugin.advancedrpc", {
     <div class="md-option-header mt-3">
       <span>AdvancedRPC Settings</span>
     </div>
+
     <div
       class="md-header-title ms-2"
       v-show="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled"
     >
-      Please disable Cider's Discord Rich Presence in Settings > Connectivity
-      and restart the app.
+      Please disable Cider's Discord Rich Presence in
+      {{$root.getLz('term.settings')}} >
+      {{$root.getLz('settings.header.connectivity')}} and restart the app.
     </div>
-    <div
-      class="settings-option-body"
-      :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled"
-    >
-      <div class="md-option-line">
-        <div class="md-option-segment">Enable AdvancedRPC</div>
-        <div class="md-option-segment md-option-segment_auto">
-          <label>
-            <input type="checkbox" v-model="settings.enabled" switch />
-          </label>
-        </div>
-      </div>
-
-      <div class="md-option-line">
+    <div class="settings-option-body">
+      <div
+        class="md-option-line"
+        v-show="settings.installedVersion < settings.latestVersion"
+      >
         <div class="md-option-segment">
-          Application ID
-          <small>Restart recommended</small>
+          <b>There is a new version available!</b>
+          <small>
+            Installed version: {{settings.installedVersion}}<br />
+            Latest version: {{settings.latestVersion}}
+          </small>
         </div>
         <div class="md-option-segment md-option-segment_auto">
-          <label>
-            <input type="text" v-model="settings.appId" />
-          </label>
+          <button class="md-btn" @click="$root.appRoute('plugins-github')">
+            Update
+          </button>
         </div>
       </div>
 
       <div
-        class="md-option-line"
-        :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled || !settings.enabled"
+        :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled"
       >
-        <div class="md-option-segment">Reload AdvancedRPC</div>
-        <div class="md-option-segment md-option-segment_auto">
-          <button class="md-btn" @click="reloadAdvancedRpc()">Reload</button>
+        <div class="md-option-line">
+          <div class="md-option-segment">Enable AdvancedRPC</div>
+          <div class="md-option-segment md-option-segment_auto">
+            <label>
+              <input type="checkbox" v-model="settings.enabled" switch />
+            </label>
+          </div>
+        </div>
+
+        <div class="md-option-line">
+          <div class="md-option-segment">
+            Application ID
+            <small>Restart recommended</small>
+          </div>
+          <div class="md-option-segment md-option-segment_auto">
+            <label>
+              <input type="text" v-model="settings.appId" />
+            </label>
+          </div>
+        </div>
+
+        <div
+          class="md-option-line"
+          :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled || !settings.enabled"
+        >
+          <div class="md-option-segment">Reload AdvancedRPC</div>
+          <div class="md-option-segment md-option-segment_auto">
+            <button class="md-btn" @click="reloadAdvancedRpc()">Reload</button>
+          </div>
         </div>
       </div>
     </div>
@@ -561,9 +584,18 @@ Vue.component("plugin.advancedrpc", {
   async mounted() {
     const settings = getLocalStorage();
 
-    ipcRenderer.on(`plugin.${PLUGIN_NAME}.data`, (_event, data) => {
-      settings.latestVersion = data.version;
-    });
+    if (!latestVersion) {
+      try {
+        const { version } = await fetch(
+          "https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json"
+        ).then((response) => response.json());
+        latestVersion = version;
+        settings.latestVersion = version;
+        settings.installedVersion = installedVersion;
+      } catch {
+        console.log(`[Plugin][${PLUGIN_NAME}] Error checking for updates.`);
+      }
+    }
 
     if (settings) this.settings = settings;
   },
