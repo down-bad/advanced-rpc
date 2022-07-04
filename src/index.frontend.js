@@ -590,11 +590,11 @@ Vue.component("plugin.advancedrpc", {
           "https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json"
         ).then((response) => response.json());
         latestVersion = version;
-        settings.latestVersion = version;
-        settings.installedVersion = installedVersion;
       } catch {
         console.log(`[Plugin][${PLUGIN_NAME}] Error checking for updates.`);
       }
+      settings.latestVersion = latestVersion;
+      settings.installedVersion = installedVersion;
     }
 
     if (settings) this.settings = settings;
