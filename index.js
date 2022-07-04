@@ -87022,13 +87022,6 @@ var src = class AdvancedRpcBackend {
 
 
   connect() {
-    // if (
-    //   this._utils.getStoreValue("general.discordrpc.enabled") ||
-    //   this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
-    //   !this._settings.enabled
-    // ) {
-    //   return;
-    // }
     // Create the client
     this._client = new AutoClient({
       transport: "ipc"
@@ -87137,7 +87130,7 @@ var src = class AdvancedRpcBackend {
 
 
   filterActivity(activity, attributes) {
-    // Add the timestamp if its playing and people want them
+    // Add timestamp
     if (this._settings.play.timestamp !== "disabled" && attributes.status) {
       activity.startTimestamp = Date.now() - (attributes.durationInMillis - attributes.remainingTime);
       if (this._settings.play.timestamp === "remaining") activity.endTimestamp = attributes.endTime;
@@ -87258,7 +87251,9 @@ var src = class AdvancedRpcBackend {
     if (!activity.details) delete activity.details;
     if (!activity.state) delete activity.state;
     if (!activity.largeImageText) delete activity.largeImageText;
+    if (activity.largeImageText?.length === 1) activity.largeImageText = ` ${activity.largeImageText} `;
     if (!activity.smallImageText) delete activity.smallImageText;
+    if (activity.smallImageText?.length === 1) activity.smallImageText = ` ${activity.smallImageText} `;
     if (activity.buttons?.length === 0) delete activity.buttons;
     return activity;
   }
