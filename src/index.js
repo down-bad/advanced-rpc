@@ -116,14 +116,6 @@ module.exports = class AdvancedRpcBackend {
    * @private
    */
   connect() {
-    // if (
-    //   this._utils.getStoreValue("general.discordrpc.enabled") ||
-    //   this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
-    //   !this._settings.enabled
-    // ) {
-    //   return;
-    // }
-
     // Create the client
     this._client = new AutoClient({ transport: "ipc" });
 
@@ -258,7 +250,7 @@ module.exports = class AdvancedRpcBackend {
    * Filter the Discord activity object
    */
   filterActivity(activity, attributes) {
-    // Add the timestamp if its playing and people want them
+    // Add timestamp
     if (this._settings.play.timestamp !== "disabled" && attributes.status) {
       activity.startTimestamp =
         Date.now() - (attributes.durationInMillis - attributes.remainingTime);
