@@ -1,7 +1,64 @@
 'use strict';
 
+var index_frontend = {};
+
+var name = "advancedrpc";
+var version$1 = "1.0.2";
+var description = "Fully customizable Discord Rich Presence for Cider";
+var main = "index.js";
+var scripts = {
+	test: "echo \"Error: no test specified\" && exit 1",
+	build: "rollup -c --environment NODE_ENV:production",
+	start: "rollup -c -w --environment NODE_ENV:development",
+	deploy: "yarn build && gh-pages -b main -d dist"
+};
+var author = "down-bad";
+var license = "ISC";
+var devDependencies = {
+	"@babel/cli": "^7.17.3",
+	"@babel/core": "^7.17.4",
+	"@babel/preset-env": "^7.16.11",
+	"@rollup/plugin-babel": "^5.3.1",
+	"@rollup/plugin-commonjs": "^21.0.2",
+	"@rollup/plugin-json": "^4.1.0",
+	"@rollup/plugin-node-resolve": "^13.1.3",
+	electron: "^17.0.1",
+	"gh-pages": "^3.2.3",
+	rollup: "^2.67.3",
+	"rollup-plugin-copy": "^3.4.0"
+};
+var dependencies = {
+	"discord-auto-rpc": "^1.0.17",
+	dotenv: "^16.0.0"
+};
+var repository = {
+	type: "git",
+	url: "git+https://github.com/down-bad/advanced-rpc.git"
+};
+var bugs = {
+	url: "https://github.com/down-bad/advanced-rpc/issues"
+};
+var homepage = "https://github.com/down-bad/advanced-rpc#readme";
+var require$$0 = {
+	name: name,
+	version: version$1,
+	description: description,
+	main: main,
+	scripts: scripts,
+	author: author,
+	license: license,
+	devDependencies: devDependencies,
+	dependencies: dependencies,
+	repository: repository,
+	bugs: bugs,
+	homepage: homepage
+};
+
 const PLUGIN_NAME = "AdvancedRPC";
 const SETTINGS_KEY = "settings";
+const {
+  version
+} = require$$0;
 
 function getLocalStorage() {
   try {
@@ -16,6 +73,9 @@ function getLocalStorage() {
 function updateLocalStorage(data) {
   localStorage.setItem(`plugin.${PLUGIN_NAME}.${SETTINGS_KEY}`, JSON.stringify(data));
 }
+
+let installedVersion = version,
+    latestVersion = undefined;
 Vue.component("plugin.advancedrpc", {
   template: `
   <div class="content-inner settings-page">
@@ -23,45 +83,63 @@ Vue.component("plugin.advancedrpc", {
     <div class="md-option-header mt-3">
       <span>AdvancedRPC Settings</span>
     </div>
+
     <div
       class="md-header-title ms-2"
-      v-show="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled"
+      v-show="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled"
     >
-      Please disable Cider's Discord Rich Presence in Settings > Connectivity
-      and restart the app.
+      Please disable Cider's Discord Rich Presence in
+      {{$root.getLz('term.settings')}} >
+      {{$root.getLz('settings.header.connectivity')}} and restart the app.
     </div>
-    <div
-      class="settings-option-body"
-      :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled"
-    >
-      <div class="md-option-line">
-        <div class="md-option-segment">Enable AdvancedRPC</div>
-        <div class="md-option-segment md-option-segment_auto">
-          <label>
-            <input type="checkbox" v-model="settings.enabled" switch />
-          </label>
-        </div>
-      </div>
-
-      <div class="md-option-line">
+    <div class="settings-option-body">
+      <div
+        class="md-option-line"
+        v-show="settings.installedVersion < settings.latestVersion"
+      >
         <div class="md-option-segment">
-          Application ID
-          <small>Restart recommended</small>
+          <b>There is a new version available!</b>
+          <small>
+            Installed version: {{settings.installedVersion}}<br />
+            Latest version: {{settings.latestVersion}}
+          </small>
         </div>
         <div class="md-option-segment md-option-segment_auto">
-          <label>
-            <input type="text" v-model="settings.appId" />
-          </label>
+          <button class="md-btn" @click="$root.appRoute('plugins-github')">
+            Update
+          </button>
         </div>
       </div>
 
       <div
-        class="md-option-line"
-        :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled || !settings.enabled"
+        :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled"
       >
-        <div class="md-option-segment">Reload AdvancedRPC</div>
-        <div class="md-option-segment md-option-segment_auto">
-          <button class="md-btn" @click="reloadAdvancedRpc()">Reload</button>
+        <div class="md-option-line">
+          <div class="md-option-segment">Enable AdvancedRPC</div>
+          <div class="md-option-segment md-option-segment_auto">
+            <label>
+              <input type="checkbox" v-model="settings.enabled" switch />
+            </label>
+          </div>
+        </div>
+
+        <div class="md-option-line">
+          <div class="md-option-segment">
+            Application ID
+            <small>Restart recommended</small>
+          </div>
+          <div class="md-option-segment md-option-segment_auto">
+            <label>
+              <input type="text" v-model="settings.appId" />
+            </label>
+          </div>
+        </div>
+
+        <div class="md-option-line" :disabled="!settings.enabled">
+          <div class="md-option-segment">Reload AdvancedRPC</div>
+          <div class="md-option-segment md-option-segment_auto">
+            <button class="md-btn" @click="reloadAdvancedRpc()">Reload</button>
+          </div>
         </div>
       </div>
     </div>
@@ -73,7 +151,7 @@ Vue.component("plugin.advancedrpc", {
 
     <div
       class="settings-option-body"
-      :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled || !settings.enabled"
+      :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled || !settings.enabled"
     >
       <div class="md-option-line">
         <div class="md-option-segment">Show presence when playing</div>
@@ -121,7 +199,7 @@ Vue.component("plugin.advancedrpc", {
             <label>
               <select
                 class="md-select"
-                style="width: 180px"
+                style="width: 195px"
                 v-model="settings.play.timestamp"
               >
                 <option value="disabled">Off</option>
@@ -138,7 +216,7 @@ Vue.component("plugin.advancedrpc", {
             <label>
               <select
                 class="md-select"
-                style="width: 180px"
+                style="width: 195px"
                 v-model="settings.play.largeImage"
               >
                 <option value="disabled">Off</option>
@@ -286,7 +364,7 @@ Vue.component("plugin.advancedrpc", {
 
     <div
       class="settings-option-body"
-      :disabled="app.cfg.general.discordrpc.enabled || app.cfg.connectivity.discord_rpc.enabled || !settings.enabled"
+      :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled || !settings.enabled"
     >
       <div class="md-option-line">
         <div class="md-option-segment">Show presence while on pause</div>
@@ -334,7 +412,7 @@ Vue.component("plugin.advancedrpc", {
             <label>
               <select
                 class="md-select"
-                style="width: 180px"
+                style="width: 195px"
                 v-model="settings.pause.largeImage"
               >
                 <option value="disabled">Off</option>
@@ -493,7 +571,6 @@ Vue.component("plugin.advancedrpc", {
     </div>
   </div>
 </div>
-
   `,
   data: () => ({
     settings: {
@@ -558,10 +635,23 @@ Vue.component("plugin.advancedrpc", {
 
   async mounted() {
     const settings = getLocalStorage();
-    ipcRenderer.on(`plugin.${PLUGIN_NAME}.data`, (_event, data) => {
-      settings.latestVersion = data.version;
-    });
-    if (settings) this.settings = settings;
+
+    if (!latestVersion) {
+      try {
+        const {
+          version
+        } = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json").then(response => response.json());
+        latestVersion = version;
+      } catch {
+        console.log(`[Plugin][${PLUGIN_NAME}] Error checking for updates.`);
+      }
+    }
+
+    if (settings) {
+      settings.latestVersion = latestVersion;
+      settings.installedVersion = installedVersion;
+      this.settings = settings;
+    }
   },
 
   methods: {
@@ -590,3 +680,5 @@ class AdvancedRpcFrontend {
 }
 
 new AdvancedRpcFrontend();
+
+module.exports = index_frontend;
