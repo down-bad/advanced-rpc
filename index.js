@@ -87051,7 +87051,7 @@ var src = class AdvancedRpcBackend {
 
 
   setActivity(attributes) {
-    if (this._utils.getStoreValue("general.discordrpc.enabled") || this._utils.getStoreValue("connectivity.discord_rpc.enabled") || !this._settings.enabled || !this._client) {
+    if (!this._client || this._utils.getStoreValue("general.discordrpc.enabled") || this._utils.getStoreValue("connectivity.discord_rpc.enabled") || !this._settings.enabled || this._settings.respectPrivateSession && this._utils.getStoreValue("general.privateEnabled")) {
       this._client.clearActivity();
 
       return;

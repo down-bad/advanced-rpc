@@ -3,7 +3,7 @@
 var index_frontend = {};
 
 var name = "advancedrpc";
-var version$1 = "1.0.2";
+var version$1 = "1.0.3";
 var description = "Fully customizable Discord Rich Presence for Cider";
 var main = "index.js";
 var scripts = {
@@ -105,9 +105,7 @@ Vue.component("plugin.advancedrpc", {
           </small>
         </div>
         <div class="md-option-segment md-option-segment_auto">
-          <button class="md-btn" @click="$root.appRoute('plugins-github')">
-            Update
-          </button>
+          <button class="md-btn" @click="update()">Update</button>
         </div>
       </div>
 
@@ -115,10 +113,31 @@ Vue.component("plugin.advancedrpc", {
         :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled"
       >
         <div class="md-option-line">
-          <div class="md-option-segment">Enable AdvancedRPC</div>
+          <div class="md-option-segment">
+            Enable AdvancedRPC
+            <small
+              v-show="settings.enabled && $root.cfg.general.privateEnabled && settings.respectPrivateSession"
+              ><b>Note:</b> Private session is currently enabled</small
+            >
+          </div>
           <div class="md-option-segment md-option-segment_auto">
             <label>
               <input type="checkbox" v-model="settings.enabled" switch />
+            </label>
+          </div>
+        </div>
+
+        <div class="md-option-line">
+          <div class="md-option-segment">
+            Disable when private session is enabled
+          </div>
+          <div class="md-option-segment md-option-segment_auto">
+            <label>
+              <input
+                type="checkbox"
+                v-model="settings.respectPrivateSession"
+                switch
+              />
             </label>
           </div>
         </div>
@@ -578,6 +597,7 @@ Vue.component("plugin.advancedrpc", {
       latestVersion: undefined,
       appId: "927026912302362675",
       enabled: true,
+      respectPrivateSession: true,
       play: {
         enabled: true,
         details: "{title}",
@@ -655,6 +675,29 @@ Vue.component("plugin.advancedrpc", {
   },
 
   methods: {
+    update() {
+      let msg = "Are you sure you want to update AdvancedRPC? Your configuration won't be lost.";
+      app.confirm(msg, res => {
+        if (res) {
+          ipcRenderer.once("plugin-installed", (event, arg) => {
+            if (arg.success) {
+              notyf.success("AdvancedRPC has been successfully updated");
+              app.confirm("AdvancedRPC has been successfully updated, press OK to relaunch Cider.", ok => {
+                if (ok) {
+                  ipcRenderer.invoke("relaunchApp");
+                } else {
+                  return;
+                }
+              });
+            } else {
+              notyf.error("Error updating AdvancedRPC");
+            }
+          });
+          ipcRenderer.invoke("get-github-plugin", "https://github.com/down-bad/advanced-rpc");
+        }
+      });
+    },
+
     reloadAdvancedRpc() {
       ipcRenderer.send("reloadAdvancedRpc");
     }
