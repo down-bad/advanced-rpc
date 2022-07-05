@@ -51,9 +51,7 @@ Vue.component("plugin.advancedrpc", {
           </small>
         </div>
         <div class="md-option-segment md-option-segment_auto">
-          <button class="md-btn" @click="$root.appRoute('plugins-github')">
-            Update
-          </button>
+          <button class="md-btn" @click="update()">Update</button>
         </div>
       </div>
 
@@ -620,6 +618,35 @@ Vue.component("plugin.advancedrpc", {
     }
   },
   methods: {
+    update() {
+      let msg =
+        "Are you sure you want to update AdvancedRPC? Your configuration won't be lost.";
+      app.confirm(msg, (res) => {
+        if (res) {
+          ipcRenderer.once("plugin-installed", (event, arg) => {
+            if (arg.success) {
+              notyf.success("AdvancedRPC has been successfully updated");
+              app.confirm(
+                "AdvancedRPC has been successfully updated, press OK to relaunch Cider.",
+                (ok) => {
+                  if (ok) {
+                    ipcRenderer.invoke("relaunchApp");
+                  } else {
+                    return;
+                  }
+                }
+              );
+            } else {
+              notyf.error("Error updating AdvancedRPC");
+            }
+          });
+          ipcRenderer.invoke(
+            "get-github-plugin",
+            "https://github.com/down-bad/advanced-rpc"
+          );
+        }
+      });
+    },
     reloadAdvancedRpc() {
       ipcRenderer.send("reloadAdvancedRpc");
     },
