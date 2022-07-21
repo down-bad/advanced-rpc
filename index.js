@@ -86919,6 +86919,7 @@ var src = class AdvancedRpcBackend {
     this.version = "1.0.0";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
+    this._prevSettings = {};
     this.init = false;
     this._utils = env.utils;
     this._attributes = undefined;
@@ -86972,7 +86973,9 @@ var src = class AdvancedRpcBackend {
     try {
       ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
         if (!settings) return;
+        this._prevSettings = this._settings;
         this._settings = settings;
+        if (this._prevSettings.appId === this._settings.appId) this.setActivity(this._attributes);
 
         if (!this.init) {
           this.init = true;
@@ -87051,7 +87054,9 @@ var src = class AdvancedRpcBackend {
 
 
   setActivity(attributes) {
-    if (!this._client || this._utils.getStoreValue("general.discordrpc.enabled") || this._utils.getStoreValue("connectivity.discord_rpc.enabled") || !this._settings.enabled || this._settings.respectPrivateSession && this._utils.getStoreValue("general.privateEnabled")) {
+    if (!this._client) return;
+
+    if (this._utils.getStoreValue("general.discordrpc.enabled") || this._utils.getStoreValue("connectivity.discord_rpc.enabled") || !this._settings.enabled || this._settings.respectPrivateSession && this._utils.getStoreValue("general.privateEnabled")) {
       this._client.clearActivity();
 
       return;

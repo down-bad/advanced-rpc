@@ -1,0 +1,222 @@
+// https://gist.github.com/prashanthca/f76e1d3d41673389b790
+@font-face {
+  font-family: "Whitney";
+  font-style: normal;
+  font-weight: bold;
+  src: url(https://onedrive.live.com/download?resid=F87CD694B48033C9!114&authkey=!ADeQuq8LqQCrD3I&ithint=file%2cwoff)
+    format("woff");
+}
+@font-face {
+  font-family: "Whitney";
+  font-style: normal;
+  font-weight: normal;
+  src: url(https://onedrive.live.com/download?resid=F87CD694B48033C9!109&authkey=!AOFbepGKctmbyqs&ithint=file%2cwoff)
+    format("woff");
+}
+@font-face {
+  font-family: "Whitney";
+  font-style: italic;
+  font-weight: normal;
+  src: url(https://onedrive.live.com/download?resid=F87CD694B48033C9!110&authkey=!AFIZ94cL6rDomi0&ithint=file%2cwoff)
+    format("woff");
+}
+
+.arpc-settings {
+  background-color: #36393f;
+  font-family: Whitney, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  position: absolute;
+  top: 55px;
+  left: 0;
+  padding: 32px;
+  padding-bottom: 90px;
+  width: 100%;
+  transition: zoom 1s;
+  zoom: 1;
+  text-rendering: optimizeLegibility;
+}
+
+.arpc-settings *:focus-visible {
+  outline: initial;
+}
+
+.arpc-settings h1, h2 {
+  color: #fff;
+}
+
+.arpc-option {
+  color: #fff;
+  line-height: 24px;
+  font-size: 16px;
+  font-weight: 500;
+  word-wrap: break-word;
+  display: flex;
+  width: 100%;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.arpc-option small {
+  margin-top: 8px;
+  color: #b9bbbe;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.arpc-option-container {
+  overflow: hidden;
+}
+
+.arpc-option-container .arpc-option:not(:last-child) {
+  border-bottom: 1px solid rgba(79, 84, 92, 0.48);
+}
+
+.arpc-option-segment {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.arpc-option-segment.arpc-option-segment_auto {
+  width: auto;
+  white-space: nowrap;
+}
+
+.arpc-bubble {
+  color: #fff;
+  font-size: 16px;
+  line-height: 20px;
+  display: flex;
+  border-radius: 4px;
+  font-weight: 500;
+  padding: 8px;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.arpc-bubble .arpc-bubble-text {
+  margin-left: 10px;
+  flex: 1;
+  align-self: center;
+}
+
+.arpc-bubble .arpc-bubble-icon {
+  display: flex;
+  width: 24px;
+  height: 24px;
+}
+
+.arpc-info {
+  background: #304552;
+  border: 1px solid #00aff4;
+}
+
+.arpc-warning {
+  background: #49443c;
+  border: 1px solid #faa81a;
+}
+
+.arpc-warning svg {
+  padding: 2px;
+  overflow: visible;
+}
+
+.arpc-option input[type="checkbox"][switch],
+input[type="checkbox"][switch]:not(:checked) {
+  width: 40px;
+  height: 24px;
+  border-radius: 14px;
+  background: #72767d;
+}
+
+.arpc-option input[type="checkbox"][switch]:active {
+  background: #61808a;
+}
+
+.arpc-option input[type="checkbox"][switch]:checked {
+  background: #3ba55d;
+}
+
+.arpc-option input[type="checkbox"][switch]:checked:active {
+  background: #4b9a83;
+}
+
+.arpc-option input[type="checkbox"][switch]::before {
+  top: -1px !important;
+  left: 0px;
+  background: #fff;
+}
+
+.arpc-option input[type="checkbox"][switch]:checked::before {
+  top: -1px !important;
+  left: 13px;
+  background: #fff;
+}
+
+.arpc-option input[type="text"],
+input[type="number"] {
+  padding: 10px;
+  width: 200px;
+  height: 40px;
+  font-size: 16px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  color: #dcddde;
+  background: initial;
+  background-color: #202225;
+  border: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.arpc-select {
+  font-size: 16px;
+  width: 200px;
+  height: 40px;
+  padding: 6px;
+  background: initial;
+  background-color: #202225;
+  color: #dcddde;
+  font-family: inherit;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.arpc-button {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  color: #fff;
+  background: none;
+  background-color: #5865f2;
+  border: none;
+  border-radius: 3px;
+  font-family: Whitney, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 16px;
+  padding: 2px 16px;
+  user-select: none;
+  cursor: pointer;
+  width: auto;
+  min-width: 60px;
+  min-height: 32px;
+  transition: background-color 0.17s ease, color 0.17s ease;
+}
+
+.arpc-button:hover {
+  background-color: #4752c4;
+}
+
+.arpc-button:active {
+  background-color: #3c45a5;
+}
