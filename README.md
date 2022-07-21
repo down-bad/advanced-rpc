@@ -6,8 +6,6 @@ This plugin allows you to configure the Cider Rich Presence to your likings, suc
 
 To access the settings, click the Cider icon on the top bar, click the "Plug-in" option to access your installed plugins and select the "AdvancedRPC" option.
 
-The settings will apply whenever you play/pause/change songs.
-
 ## Credits
 
 [coredev-uk](https://github.com/coredev-uk) for Cider's RPC\

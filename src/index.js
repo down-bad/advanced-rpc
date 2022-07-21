@@ -13,6 +13,7 @@ module.exports = class AdvancedRpcBackend {
     this.author = "down-bad (Vasilis#1517)";
 
     this._settings = {};
+    this._prevSettings = {};
     this.init = false;
 
     this._utils = env.utils;
@@ -70,7 +71,11 @@ module.exports = class AdvancedRpcBackend {
     try {
       ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
         if (!settings) return;
+        this._prevSettings = this._settings;
         this._settings = settings;
+
+        if (this._prevSettings.appId === this._settings.appId)
+          this.setActivity(this._attributes);
 
         if (!this.init) {
           this.init = true;
@@ -149,8 +154,9 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   setActivity(attributes) {
+    if (!this._client) return;
+
     if (
-      !this._client ||
       this._utils.getStoreValue("general.discordrpc.enabled") ||
       this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
       !this._settings.enabled ||
