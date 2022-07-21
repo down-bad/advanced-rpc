@@ -28,6 +28,7 @@ export default {
       targets: [
         { src: "package.json", dest: OUTPUT_DIR },
         { src: "README.md", dest: OUTPUT_DIR },
+        { src: "src/advancedrpc.less", dest: OUTPUT_DIR },
       ],
     }),
     json(),
