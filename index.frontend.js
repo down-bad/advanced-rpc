@@ -3,7 +3,7 @@
 var index_frontend = {};
 
 var name = "advancedrpc";
-var version$1 = "1.1.0";
+var version$1 = "1.1.1";
 var description = "Fully customizable Discord Rich Presence for Cider";
 var main = "index.js";
 var scripts = {
@@ -135,7 +135,7 @@ Vue.component("plugin.advancedrpc", {
   <div class="arpc-option-container">
     <div
       class="arpc-option"
-      v-show="settings.installedVersion < settings.latestVersion"
+      v-if="settings.installedVersion < settings.latestVersion"
     >
       <div class="arpc-option-segment">
         <b>There is a new version available!</b>
@@ -163,7 +163,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          Disable when private session is enabled
+          Hide while Private Session is enabled
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -207,7 +207,7 @@ Vue.component("plugin.advancedrpc", {
     :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled || !settings.enabled"
   >
     <div class="arpc-option">
-      <div class="arpc-option-segment">Show presence when playing</div>
+      <div class="arpc-option-segment">Show Presence on Playback</div>
       <div class="arpc-option-segment arpc-option-segment_auto">
         <label>
           <input type="checkbox" v-model="settings.play.enabled" switch />
@@ -218,7 +218,7 @@ Vue.component("plugin.advancedrpc", {
     <div v-show="settings.play.enabled">
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          First line (details)
+          First Line (details)
           <small
             >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
             {title}, {album}, {trackNumber}</small
@@ -233,7 +233,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          Second line (state)
+          Second Line (state)
           <small
             >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
             {title}, {album}, {trackNumber}</small
@@ -260,12 +260,12 @@ Vue.component("plugin.advancedrpc", {
       </div>
 
       <div class="arpc-option">
-        <div class="arpc-option-segment">Image</div>
+        <div class="arpc-option-segment">Large Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <select class="arpc-select" v-model="settings.play.largeImage">
               <option value="disabled">Off</option>
-              <option value="cover">Cover art</option>
+              <option value="cover">Artwork</option>
               <option value="custom">Custom</option>
             </select>
           </label>
@@ -274,7 +274,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option" v-show="settings.play.largeImage == 'custom'">
         <div class="arpc-option-segment">
-          Image key/source <small>Max 256 characters</small>
+          Large Image Key / URL <small>Max 256 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -285,7 +285,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option" v-show="settings.play.largeImage != 'disabled'">
         <div class="arpc-option-segment">
-          Image text
+          Large Image Text
           <small
             >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
             {title}, {album}, {trackNumber}</small
@@ -299,7 +299,7 @@ Vue.component("plugin.advancedrpc", {
       </div>
 
       <div class="arpc-option">
-        <div class="arpc-option-segment">Show small icon</div>
+        <div class="arpc-option-segment">Small Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <input type="checkbox" v-model="settings.play.smallImage" switch />
@@ -309,7 +309,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option" v-show="settings.play.smallImage">
         <div class="arpc-option-segment">
-          Small image key/source <small>Max 256 characters</small>
+          Small Image Key / URL <small>Max 256 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -320,7 +320,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option" v-show="settings.play.smallImage">
         <div class="arpc-option-segment">
-          Small image text
+          Small Image Text
           <small
             >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
             {title}, {album}, {trackNumber}</small
@@ -334,6 +334,15 @@ Vue.component("plugin.advancedrpc", {
       </div>
 
       <div class="arpc-option">
+        <div class="arpc-option-segment">Enable Buttons</div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <input type="checkbox" v-model="settings.play.buttons" switch />
+          </label>
+        </div>
+      </div>
+
+      <div class="arpc-option" v-show="settings.play.buttons">
         <div class="arpc-option-segment">
           Buttons <br v-show="settings.play.buttons" />
           <small v-show="settings.play.buttons"
@@ -345,48 +354,23 @@ Vue.component("plugin.advancedrpc", {
             {appleMusicUrl}, {ciderUrl}</small
           >
         </div>
-        <div class="arpc-option-segment arpc-option-segment_auto">
-          <label>
-            <input type="checkbox" v-model="settings.play.buttons" switch />
-          </label>
-        </div>
-      </div>
+        <div
+          class="arpc-option-segment arpc-option-segment_auto arpc-button-segment"
+        >
+          <label>Label</label>
+          <input type="text" v-model="settings.play.button1.label" />
 
-      <div v-show="settings.play.buttons">
-        <div class="arpc-option">
-          <div class="arpc-option-segment">Button #1 label</div>
-          <div class="arpc-option-segment arpc-option-segment_auto">
-            <label>
-              <input type="text" v-model="settings.play.button1.label" />
-            </label>
-          </div>
+          <label>URL</label>
+          <input type="text" v-model="settings.play.button1.url" />
         </div>
+        <div
+          class="arpc-option-segment arpc-option-segment_auto arpc-button-segment"
+        >
+          <label>Label</label>
+          <input type="text" v-model="settings.play.button2.label" />
 
-        <div class="arpc-option">
-          <div class="arpc-option-segment">Button #1 URL</div>
-          <div class="arpc-option-segment arpc-option-segment_auto">
-            <label>
-              <input type="text" v-model="settings.play.button1.url" />
-            </label>
-          </div>
-        </div>
-
-        <div class="arpc-option">
-          <div class="arpc-option-segment">Button #2 label</div>
-          <div class="arpc-option-segment arpc-option-segment_auto">
-            <label>
-              <input type="text" v-model="settings.play.button2.label" />
-            </label>
-          </div>
-        </div>
-
-        <div class="arpc-option">
-          <div class="arpc-option-segment">Button #2 URL</div>
-          <div class="arpc-option-segment arpc-option-segment_auto">
-            <label>
-              <input type="text" v-model="settings.play.button2.url" />
-            </label>
-          </div>
+          <label>URL</label>
+          <input type="text" v-model="settings.play.button2.url" />
         </div>
       </div>
     </div>
@@ -400,7 +384,7 @@ Vue.component("plugin.advancedrpc", {
     :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled || !settings.enabled"
   >
     <div class="arpc-option">
-      <div class="arpc-option-segment">Show presence while paused</div>
+      <div class="arpc-option-segment">Show Presence while Paused</div>
       <div class="arpc-option-segment arpc-option-segment_auto">
         <label>
           <input type="checkbox" v-model="settings.pause.enabled" switch />
@@ -411,7 +395,7 @@ Vue.component("plugin.advancedrpc", {
     <div v-show="settings.pause.enabled">
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          First line (details)
+          First Line (details)
           <small
             >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
             {title}, {album}, {trackNumber}</small
@@ -426,7 +410,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          Second line (state)
+          Second Line (state)
           <small
             >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
             {title}, {album}, {trackNumber}</small
@@ -440,12 +424,12 @@ Vue.component("plugin.advancedrpc", {
       </div>
 
       <div class="arpc-option">
-        <div class="arpc-option-segment">Image</div>
+        <div class="arpc-option-segment">Large Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <select class="arpc-select" v-model="settings.pause.largeImage">
               <option value="disabled">Off</option>
-              <option value="cover">Cover art</option>
+              <option value="cover">Artwork</option>
               <option value="custom">Custom</option>
             </select>
           </label>
@@ -454,7 +438,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option" v-show="settings.pause.largeImage == 'custom'">
         <div class="arpc-option-segment">
-          Image key/source <small>Max 256 characters</small>
+          Large Image Key / URL <small>Max 256 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -465,7 +449,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option" v-show="settings.pause.largeImage != 'disabled'">
         <div class="arpc-option-segment">
-          Image text
+          Large Image Text
           <small
             >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
             {title}, {album}, {trackNumber}</small
@@ -479,7 +463,7 @@ Vue.component("plugin.advancedrpc", {
       </div>
 
       <div class="arpc-option">
-        <div class="arpc-option-segment">Show small icon</div>
+        <div class="arpc-option-segment">Small Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <input type="checkbox" v-model="settings.pause.smallImage" switch />
@@ -489,7 +473,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option" v-show="settings.pause.smallImage">
         <div class="arpc-option-segment">
-          Small image key/source <small>Max 256 characters</small>
+          Small Image Key / URL <small>Max 256 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -500,7 +484,7 @@ Vue.component("plugin.advancedrpc", {
 
       <div class="arpc-option" v-show="settings.pause.smallImage">
         <div class="arpc-option-segment">
-          Small image text
+          Small Image Text
           <small
             >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
             {title}, {album}, {trackNumber}</small
@@ -514,6 +498,35 @@ Vue.component("plugin.advancedrpc", {
       </div>
 
       <div class="arpc-option">
+        <div class="arpc-option-segment">Enable Buttons</div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <input type="checkbox" v-model="settings.pause.buttons" switch />
+          </label>
+        </div>
+      </div>
+
+      <div
+        v-show="settings.pause.buttons && settings.play.buttons"
+        class="arpc-option"
+      >
+        <div class="arpc-option-segment">Use Playback Buttons</div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <input
+              type="checkbox"
+              v-model="settings.pause.usePlayButtons"
+              switch
+            />
+          </label>
+        </div>
+      </div>
+
+      <div
+        class="arpc-option"
+        v-show="settings.pause.buttons"
+        :disabled="settings.pause.usePlayButtons && settings.play.buttons"
+      >
         <div class="arpc-option-segment">
           Buttons <br v-show="settings.pause.buttons" />
           <small v-show="settings.pause.buttons"
@@ -525,63 +538,23 @@ Vue.component("plugin.advancedrpc", {
             {appleMusicUrl}, {ciderUrl}</small
           >
         </div>
-        <div class="arpc-option-segment arpc-option-segment_auto">
-          <label>
-            <input type="checkbox" v-model="settings.pause.buttons" switch />
-          </label>
+        <div
+          class="arpc-option-segment arpc-option-segment_auto arpc-button-segment"
+        >
+          <label>Label </label>
+          <input type="text" v-model="settings.pause.button1.label" />
+
+          <label>URL</label>
+          <input type="text" v-model="settings.pause.button1.url" />
         </div>
-      </div>
+        <div
+          class="arpc-option-segment arpc-option-segment_auto arpc-button-segment"
+        >
+          <label>Label</label>
+          <input type="text" v-model="settings.pause.button2.label" />
 
-      <div v-show="settings.pause.buttons">
-        <div v-show="settings.play.buttons" class="arpc-option">
-          <div class="arpc-option-segment">Use same buttons as playback</div>
-          <div class="arpc-option-segment arpc-option-segment_auto">
-            <label>
-              <input
-                type="checkbox"
-                v-model="settings.pause.usePlayButtons"
-                switch
-              />
-            </label>
-          </div>
-        </div>
-
-        <div :disabled="settings.pause.usePlayButtons && settings.play.buttons">
-          <div class="arpc-option">
-            <div class="arpc-option-segment">Button #1 label</div>
-            <div class="arpc-option-segment arpc-option-segment_auto">
-              <label>
-                <input type="text" v-model="settings.pause.button1.label" />
-              </label>
-            </div>
-          </div>
-
-          <div class="arpc-option">
-            <div class="arpc-option-segment">Button #1 URL</div>
-            <div class="arpc-option-segment arpc-option-segment_auto">
-              <label>
-                <input type="text" v-model="settings.pause.button1.url" />
-              </label>
-            </div>
-          </div>
-
-          <div class="arpc-option">
-            <div class="arpc-option-segment">Button #2 label</div>
-            <div class="arpc-option-segment arpc-option-segment_auto">
-              <label>
-                <input type="text" v-model="settings.pause.button2.label" />
-              </label>
-            </div>
-          </div>
-
-          <div class="arpc-option">
-            <div class="arpc-option-segment">Button #2 URL</div>
-            <div class="arpc-option-segment arpc-option-segment_auto">
-              <label>
-                <input type="text" v-model="settings.pause.button2.url" />
-              </label>
-            </div>
-          </div>
+          <label>URL</label>
+          <input type="text" v-model="settings.pause.button2.url" />
         </div>
       </div>
     </div>
@@ -593,7 +566,7 @@ Vue.component("plugin.advancedrpc", {
       installedVersion: undefined,
       latestVersion: undefined,
       appId: "927026912302362675",
-      enabled: false,
+      enabled: true,
       respectPrivateSession: true,
       play: {
         enabled: true,
@@ -659,6 +632,7 @@ Vue.component("plugin.advancedrpc", {
           version
         } = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json").then(response => response.json());
         latestVersion = version;
+        if (latestVersion > installedVersion) console.log(`[Plugin][${PLUGIN_NAME}] There is a newer version available.`);
       } catch {
         console.log(`[Plugin][${PLUGIN_NAME}] Error checking for updates.`);
       }
@@ -668,6 +642,56 @@ Vue.component("plugin.advancedrpc", {
       settings.latestVersion = latestVersion;
       settings.installedVersion = installedVersion;
       this.settings = settings;
+    } else {
+      this.settings = {
+        installedVersion: undefined,
+        latestVersion: undefined,
+        appId: "927026912302362675",
+        enabled: true,
+        respectPrivateSession: true,
+        play: {
+          enabled: true,
+          details: "{title}",
+          state: "{artist}",
+          timestamp: "remaining",
+          largeImage: "cover",
+          largeImageKey: "applemusic",
+          largeImageText: "{album}",
+          smallImage: true,
+          smallImageKey: "play",
+          smallImageText: "Playing",
+          buttons: false,
+          button1: {
+            label: "Listen on Cider",
+            url: "{ciderUrl}"
+          },
+          button2: {
+            label: "View on Apple Music",
+            url: "{appleMusicUrl}"
+          }
+        },
+        pause: {
+          enabled: true,
+          details: "{title}",
+          state: "{artist}",
+          largeImage: "cover",
+          largeImageKey: "applemusic",
+          largeImageText: "{album}",
+          smallImage: true,
+          smallImageKey: "pause",
+          smallImageText: "Paused",
+          buttons: false,
+          usePlayButtons: false,
+          button1: {
+            label: "Listen on Cider",
+            url: "{ciderUrl}"
+          },
+          button2: {
+            label: "View on Apple Music",
+            url: "{appleMusicUrl}"
+          }
+        }
+      };
     }
   },
 
