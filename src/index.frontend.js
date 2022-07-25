@@ -539,7 +539,7 @@ Vue.component("plugin.advancedrpc", {
       installedVersion: undefined,
       latestVersion: undefined,
       appId: "927026912302362675",
-      enabled: false,
+      enabled: true,
       respectPrivateSession: true,
       play: {
         enabled: true,
@@ -603,6 +603,10 @@ Vue.component("plugin.advancedrpc", {
           "https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json"
         ).then((response) => response.json());
         latestVersion = version;
+        if (latestVersion > installedVersion)
+          console.log(
+            `[Plugin][${PLUGIN_NAME}] There is a newer version available.`
+          );
       } catch {
         console.log(`[Plugin][${PLUGIN_NAME}] Error checking for updates.`);
       }
@@ -612,6 +616,56 @@ Vue.component("plugin.advancedrpc", {
       settings.latestVersion = latestVersion;
       settings.installedVersion = installedVersion;
       this.settings = settings;
+    } else {
+      this.settings = {
+        installedVersion: undefined,
+        latestVersion: undefined,
+        appId: "927026912302362675",
+        enabled: true,
+        respectPrivateSession: true,
+        play: {
+          enabled: true,
+          details: "{title}",
+          state: "{artist}",
+          timestamp: "remaining",
+          largeImage: "cover",
+          largeImageKey: "applemusic",
+          largeImageText: "{album}",
+          smallImage: true,
+          smallImageKey: "play",
+          smallImageText: "Playing",
+          buttons: false,
+          button1: {
+            label: "Listen on Cider",
+            url: "{ciderUrl}",
+          },
+          button2: {
+            label: "View on Apple Music",
+            url: "{appleMusicUrl}",
+          },
+        },
+        pause: {
+          enabled: true,
+          details: "{title}",
+          state: "{artist}",
+          largeImage: "cover",
+          largeImageKey: "applemusic",
+          largeImageText: "{album}",
+          smallImage: true,
+          smallImageKey: "pause",
+          smallImageText: "Paused",
+          buttons: false,
+          usePlayButtons: false,
+          button1: {
+            label: "Listen on Cider",
+            url: "{ciderUrl}",
+          },
+          button2: {
+            label: "View on Apple Music",
+            url: "{appleMusicUrl}",
+          },
+        },
+      };
     }
   },
   methods: {
