@@ -1,64 +1,8 @@
+/* Version: 1.2.0 - August 4, 2022 23:44:31 */
 'use strict';
-
-var index_frontend = {};
-
-var name = "advancedrpc";
-var version$1 = "1.1.1";
-var description = "Fully customizable Discord Rich Presence for Cider";
-var main = "index.js";
-var scripts = {
-	test: "echo \"Error: no test specified\" && exit 1",
-	build: "rollup -c --environment NODE_ENV:production",
-	start: "rollup -c -w --environment NODE_ENV:development",
-	deploy: "yarn build && gh-pages -b main -d dist"
-};
-var author = "down-bad";
-var license = "ISC";
-var devDependencies = {
-	"@babel/cli": "^7.17.3",
-	"@babel/core": "^7.17.4",
-	"@babel/preset-env": "^7.16.11",
-	"@rollup/plugin-babel": "^5.3.1",
-	"@rollup/plugin-commonjs": "^21.0.2",
-	"@rollup/plugin-json": "^4.1.0",
-	"@rollup/plugin-node-resolve": "^13.1.3",
-	electron: "^17.0.1",
-	"gh-pages": "^3.2.3",
-	rollup: "^2.67.3",
-	"rollup-plugin-copy": "^3.4.0"
-};
-var dependencies = {
-	"discord-auto-rpc": "^1.0.17",
-	dotenv: "^16.0.0"
-};
-var repository = {
-	type: "git",
-	url: "git+https://github.com/down-bad/advanced-rpc.git"
-};
-var bugs = {
-	url: "https://github.com/down-bad/advanced-rpc/issues"
-};
-var homepage = "https://github.com/down-bad/advanced-rpc#readme";
-var require$$0 = {
-	name: name,
-	version: version$1,
-	description: description,
-	main: main,
-	scripts: scripts,
-	author: author,
-	license: license,
-	devDependencies: devDependencies,
-	dependencies: dependencies,
-	repository: repository,
-	bugs: bugs,
-	homepage: homepage
-};
 
 const PLUGIN_NAME = "AdvancedRPC";
 const SETTINGS_KEY = "settings";
-const {
-  version
-} = require$$0;
 
 function getLocalStorage() {
   try {
@@ -74,12 +18,51 @@ function updateLocalStorage(data) {
   localStorage.setItem(`plugin.${PLUGIN_NAME}.${SETTINGS_KEY}`, JSON.stringify(data));
 }
 
-let installedVersion = version,
-    latestVersion = undefined;
+async function checkForUpdates() {
+  try {
+    const {
+      version
+    } = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json").then(response => response.json());
+
+    if (version > installedVersion) {
+      const updateNotyf = notyf.error({
+        message: "There is a new AdvancedRPC version available!",
+        icon: false,
+        background: "#5865f2",
+        duration: "5000",
+        dismissible: true
+      });
+      updateNotyf.on("click", ({
+        target,
+        event
+      }) => {
+        app.appRoute("plugin/advancedrpc");
+      });
+
+      try {
+        const changelogs = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/changelog.json").then(response => response.json());
+
+        if (changelogs) {
+          changelog = changelogs[version];
+        }
+      } catch {}
+    }
+
+    latestVersion = version;
+  } catch {
+    console.log(`[Plugin][${PLUGIN_NAME}] Error checking for updates.`);
+  }
+}
+
+let installedVersion = "1.2.0",
+    latestVersion = undefined,
+    changelog = undefined;
 Vue.component("plugin.advancedrpc", {
   template: `
   <div class="arpc-settings">
-  <h1>AdvancedRPC</h1>
+  <div class="arpc-header">
+    <h1>AdvancedRPC</h1>
+  </div>
 
   <div
     class="arpc-bubble arpc-warning"
@@ -133,15 +116,19 @@ Vue.component("plugin.advancedrpc", {
   </div>
 
   <div class="arpc-option-container">
-    <div
-      class="arpc-option"
-      v-if="settings.installedVersion < settings.latestVersion"
-    >
+    <div class="arpc-option" v-if="installedVersion < latestVersion">
       <div class="arpc-option-segment">
         <b>There is a new version available!</b>
         <small>
-          Installed version: {{settings.installedVersion}}<br />
-          Latest version: {{settings.latestVersion}}
+          <b>Installed version</b>: {{installedVersion}} <br />
+          <b>Latest version</b>: {{latestVersion}} <br />
+          <a @click="showChangelog()" v-show="changelog && !changelogState"
+            >Show changelog</a
+          >
+          <div id="arpc-changelog"></div>
+          <a @click="hideChangelog()" v-show="changelog && changelogState"
+            >Hide changelog</a
+          >
         </small>
       </div>
       <div class="arpc-option-segment arpc-option-segment_auto">
@@ -179,21 +166,19 @@ Vue.component("plugin.advancedrpc", {
       <div class="arpc-option">
         <div class="arpc-option-segment">
           Application ID
-          <small>Restart recommended</small>
+          <small
+            >Create your own on
+            <a
+              href="https://discord.com/developers/applications"
+              target="_blank"
+              >Discord Developer Portal</a
+            >.<br />Restart after changing to avoid unwanted effects.</small
+          >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <input type="text" v-model="settings.appId" />
           </label>
-        </div>
-      </div>
-
-      <div class="arpc-option" :disabled="!settings.enabled">
-        <div class="arpc-option-segment">Reload AdvancedRPC</div>
-        <div class="arpc-option-segment arpc-option-segment_auto">
-          <button class="arpc-button" @click="reloadAdvancedRpc()">
-            Reload
-          </button>
         </div>
       </div>
     </div>
@@ -220,8 +205,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           First Line (details)
           <small
-            >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
-            {title}, {album}, {trackNumber}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -235,8 +219,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Second Line (state)
           <small
-            >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
-            {title}, {album}, {trackNumber}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -287,8 +270,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Large Image Text
           <small
-            >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
-            {title}, {album}, {trackNumber}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -302,12 +284,16 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">Small Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
-            <input type="checkbox" v-model="settings.play.smallImage" switch />
+            <select class="arpc-select" v-model="settings.play.smallImage">
+              <option value="disabled">Off</option>
+              <option value="cover">Artwork</option>
+              <option value="custom">Custom</option>
+            </select>
           </label>
         </div>
       </div>
 
-      <div class="arpc-option" v-show="settings.play.smallImage">
+      <div class="arpc-option" v-show="settings.play.smallImage == 'custom'">
         <div class="arpc-option-segment">
           Small Image Key / URL <small>Max 256 characters</small>
         </div>
@@ -318,12 +304,11 @@ Vue.component("plugin.advancedrpc", {
         </div>
       </div>
 
-      <div class="arpc-option" v-show="settings.play.smallImage">
+      <div class="arpc-option" v-show="settings.play.smallImage != 'disabled'">
         <div class="arpc-option-segment">
           Small Image Text
           <small
-            >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
-            {title}, {album}, {trackNumber}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -346,16 +331,13 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Buttons <br v-show="settings.play.buttons" />
           <small v-show="settings.play.buttons"
-            ><b>Max label length:</b> 30 characters<br />
-            <b>Max URL length:</b> 512 characters<br /><b>Label variables:</b>
-            {artist}, {composer}, {title}, {album}, {trackNumber}<br /><b
-              >URL variables:</b
-            >
-            {appleMusicUrl}, {ciderUrl}</small
+            ><b>Max label length</b>: 30 characters<br />
+            <b>Max URL length</b>: 512 characters<br /><b>Label variables</b>:
+            {{textVariables}}<br /><b>URL variables</b>: {{urlVariables}}</small
           >
         </div>
         <div
-          class="arpc-option-segment arpc-option-segment_auto arpc-button-segment"
+          class="arpc-option-segment arpc-option-segment_auto arpc-multiple-items"
         >
           <label>Label</label>
           <input type="text" v-model="settings.play.button1.label" />
@@ -364,7 +346,7 @@ Vue.component("plugin.advancedrpc", {
           <input type="text" v-model="settings.play.button1.url" />
         </div>
         <div
-          class="arpc-option-segment arpc-option-segment_auto arpc-button-segment"
+          class="arpc-option-segment arpc-option-segment_auto arpc-multiple-items"
         >
           <label>Label</label>
           <input type="text" v-model="settings.play.button2.label" />
@@ -392,13 +374,15 @@ Vue.component("plugin.advancedrpc", {
       </div>
     </div>
 
-    <div v-show="settings.pause.enabled">
+    <div
+      v-show="settings.pause.enabled"
+      :disabled="settings.pause.usePlayConfig"
+    >
       <div class="arpc-option">
         <div class="arpc-option-segment">
           First Line (details)
           <small
-            >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
-            {title}, {album}, {trackNumber}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -412,8 +396,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Second Line (state)
           <small
-            >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
-            {title}, {album}, {trackNumber}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -451,8 +434,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Large Image Text
           <small
-            >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
-            {title}, {album}, {trackNumber}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -466,12 +448,16 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">Small Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
-            <input type="checkbox" v-model="settings.pause.smallImage" switch />
+            <select class="arpc-select" v-model="settings.pause.smallImage">
+              <option value="disabled">Off</option>
+              <option value="cover">Artwork</option>
+              <option value="custom">Custom</option>
+            </select>
           </label>
         </div>
       </div>
 
-      <div class="arpc-option" v-show="settings.pause.smallImage">
+      <div class="arpc-option" v-show="settings.pause.smallImage == 'custom'">
         <div class="arpc-option-segment">
           Small Image Key / URL <small>Max 256 characters</small>
         </div>
@@ -482,12 +468,11 @@ Vue.component("plugin.advancedrpc", {
         </div>
       </div>
 
-      <div class="arpc-option" v-show="settings.pause.smallImage">
+      <div class="arpc-option" v-show="settings.pause.smallImage != 'disabled'">
         <div class="arpc-option-segment">
           Small Image Text
           <small
-            >Max 128 characters<br /><b>Variables:</b> {artist}, {composer},
-            {title}, {album}, {trackNumber}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -524,31 +509,28 @@ Vue.component("plugin.advancedrpc", {
 
       <div
         class="arpc-option"
-        v-show="settings.pause.buttons"
+        v-show="settings.pause.buttons && !settings.pause.usePlayConfig"
         :disabled="settings.pause.usePlayButtons && settings.play.buttons"
       >
         <div class="arpc-option-segment">
           Buttons <br v-show="settings.pause.buttons" />
           <small v-show="settings.pause.buttons"
             ><b>Max label length:</b> 30 characters<br />
-            <b>Max URL length:</b> 512 characters<br /><b>Label variables:</b>
-            {artist}, {composer}, {title}, {album}, {trackNumber}<br /><b
-              >URL variables:</b
-            >
-            {appleMusicUrl}, {ciderUrl}</small
+            <b>Max URL length:</b> 512 characters<br /><b>Label variables</b>:
+            {{textVariables}}<br /><b>URL variables</b>: {{urlVariables}}</small
           >
         </div>
         <div
-          class="arpc-option-segment arpc-option-segment_auto arpc-button-segment"
+          class="arpc-option-segment arpc-option-segment_auto arpc-multiple-items"
         >
-          <label>Label </label>
+          <label>Label</label>
           <input type="text" v-model="settings.pause.button1.label" />
 
           <label>URL</label>
           <input type="text" v-model="settings.pause.button1.url" />
         </div>
         <div
-          class="arpc-option-segment arpc-option-segment_auto arpc-button-segment"
+          class="arpc-option-segment arpc-option-segment_auto arpc-multiple-items"
         >
           <label>Label</label>
           <input type="text" v-model="settings.pause.button2.label" />
@@ -559,12 +541,134 @@ Vue.component("plugin.advancedrpc", {
       </div>
     </div>
   </div>
+
+  <!-- Advanced -->
+  <h2>Advanced</h2>
+
+  <div
+    class="arpc-option-container"
+    :disabled="app.cfg.general?.discordrpc?.enabled || app.cfg.connectivity?.discord_rpc?.enabled || !settings.enabled"
+  >
+    <div class="arpc-option">
+      <div class="arpc-option-segment">
+        Fallback Image
+        <small
+          >Set a custom image to be shown when the artwork doesn't exist (such
+          as for local files).<br />Max 256 characters</small
+        >
+      </div>
+      <div
+        class="arpc-option-segment arpc-option-segment_auto arpc-multiple-items"
+      >
+        <label>Play</label>
+        <input type="text" v-model="settings.play.fallbackImage" />
+      </div>
+      <div
+        class="arpc-option-segment arpc-option-segment_auto arpc-multiple-items"
+      >
+        <label>Pause</label>
+        <input type="text" v-model="settings.pause.fallbackImage" />
+      </div>
+    </div>
+
+    <div class="arpc-option">
+      <div class="arpc-option-segment">
+        Presence Update Delay (in milliseconds)
+        <small
+          >By default, AdvancedRPC will try to update your Discord presence info
+          as soon as possible. However, trying to do that rapidly (such as when
+          changing songs fast) can create issues like rate limits (your presence
+          freezing for other users). This option could solve this issue by
+          putting a delay after a presence update occurs. <br />
+          Recommended value: 5000 (5 seconds)
+        </small>
+      </div>
+      <div class="arpc-option-segment arpc-option-segment_auto">
+        <input
+          type="number"
+          v-model="settings.presenceUpdateDelay"
+          placeholder="0"
+        />
+      </div>
+    </div>
+
+    <div class="arpc-option">
+      <div class="arpc-option-segment">
+        Artwork / Cover Image Size
+        <small
+          >Changes the width and height of the artwork / playlist cover when
+          used in the presence. Larger values might cause the artwork to take
+          longer to load.</small
+        >
+      </div>
+      <div class="arpc-option-segment arpc-option-segment_auto">
+        <label>
+          <input
+            type="number"
+            v-model="settings.imageSize"
+            placeholder="1024"
+          />
+        </label>
+      </div>
+    </div>
+
+    <div class="arpc-option">
+      <div class="arpc-option-segment">
+        Apply Settings
+        <small
+          >Set whether to apply the settings manually, on play/pause or
+          immediately while editing them. Applying them immediately can cause
+          rate limits.</small
+        >
+      </div>
+      <div
+        class="arpc-option-segment arpc-option-segment_auto arpc-multiple-items"
+      >
+        <button
+          v-show="settings.applySettings !== 'immediately'"
+          class="arpc-button"
+          @click="updateSettings()"
+        >
+          Apply Now
+        </button>
+      </div>
+      <div
+        class="arpc-option-segment arpc-option-segment_auto arpc-multiple-items"
+      >
+        <label>
+          <select class="arpc-select" v-model="settings.applySettings">
+            <option value="manually">Manually</option>
+            <option value="state">On State Change</option>
+            <option value="immediately">Immediately</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="arpc-option">
+      <div class="arpc-option-segment">
+        Reload AdvancedRPC
+        <small
+          >Might create unwanted effects. Restarting is recommended over using
+          this option.</small
+        >
+      </div>
+      <div class="arpc-option-segment arpc-option-segment_auto">
+        <button class="arpc-button" @click="reloadAdvancedRpc()">Reload</button>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <b>AdvancedRPC</b> <br />
+    {{versionInfo}} <br />
+    By Vasilis#1517 <br />
+    <a href="https://ko-fi.com/vasii" target="_blank">Donate</a>
+  </footer>
 </div>
+
   `,
   data: () => ({
     settings: {
-      installedVersion: undefined,
-      latestVersion: undefined,
       appId: "927026912302362675",
       enabled: true,
       respectPrivateSession: true,
@@ -576,17 +680,18 @@ Vue.component("plugin.advancedrpc", {
         largeImage: "cover",
         largeImageKey: "applemusic",
         largeImageText: "{album}",
-        smallImage: true,
+        smallImage: "custom",
         smallImageKey: "play",
         smallImageText: "Playing",
+        fallbackImage: "applemusic",
         buttons: false,
         button1: {
-          label: "Listen on Cider",
-          url: "{ciderUrl}"
+          label: "Listen on Apple Music",
+          url: "{appleMusicUrl}"
         },
         button2: {
-          label: "View on Apple Music",
-          url: "{appleMusicUrl}"
+          label: "",
+          url: ""
         }
       },
       pause: {
@@ -596,27 +701,38 @@ Vue.component("plugin.advancedrpc", {
         largeImage: "cover",
         largeImageKey: "applemusic",
         largeImageText: "{album}",
-        smallImage: true,
+        smallImage: "custom",
         smallImageKey: "pause",
         smallImageText: "Paused",
+        fallbackImage: "applemusic",
         buttons: false,
         usePlayButtons: false,
         button1: {
-          label: "Listen on Cider",
-          url: "{ciderUrl}"
+          label: "Listen on Apple Music",
+          url: "{appleMusicUrl}"
         },
         button2: {
-          label: "View on Apple Music",
-          url: "{appleMusicUrl}"
+          label: "",
+          url: ""
         }
-      }
-    }
+      },
+      imageSize: 1024,
+      applySettings: "state",
+      presenceUpdateDelay: 0
+    },
+    installedVersion: installedVersion,
+    latestVersion: latestVersion,
+    changelog: changelog,
+    changelogState: false,
+    versionInfo: "1.2.0 - August 4, 2022 23:44:31",
+    textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
+    urlVariables: "{appleMusicUrl}, {ciderUrl}"
   }),
   watch: {
     settings: {
       handler() {
         updateLocalStorage(this.settings);
-        ipcRenderer.invoke(`plugin.${PLUGIN_NAME}.setting`, this.settings);
+        if (this.settings.applySettings !== "manually") ipcRenderer.invoke(`plugin.${PLUGIN_NAME}.setting`, this.settings);
       },
 
       deep: true
@@ -626,26 +742,25 @@ Vue.component("plugin.advancedrpc", {
   async mounted() {
     const settings = getLocalStorage();
 
-    if (!latestVersion) {
-      try {
-        const {
-          version
-        } = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json").then(response => response.json());
-        latestVersion = version;
-        if (latestVersion > installedVersion) console.log(`[Plugin][${PLUGIN_NAME}] There is a newer version available.`);
-      } catch {
-        console.log(`[Plugin][${PLUGIN_NAME}] Error checking for updates.`);
-      }
-    }
-
     if (settings) {
-      settings.latestVersion = latestVersion;
-      settings.installedVersion = installedVersion;
+      // Convert old boolean settings
+      if (typeof settings.play.smallImage == "boolean") {
+        settings.play.smallImage = settings.play.smallImage ? "custom" : "disabled";
+      }
+
+      if (typeof settings.pause.smallImage == "boolean") {
+        settings.pause.smallImage = settings.pause.smallImage ? "custom" : "disabled";
+      } // Add missing settings for users who update from older version
+
+
+      if (!settings.imageSize) settings.imageSize = 1024;
+      if (!settings.play.fallbackImage) settings.play.fallbackImage = "applemusic";
+      if (!settings.pause.fallbackImage) settings.pause.fallbackImage = "applemusic";
+      if (!settings.applySettings) settings.applySettings = "state";
+      if (!settings.presenceUpdateDelay) settings.presenceUpdateDelay = 0;
       this.settings = settings;
     } else {
       this.settings = {
-        installedVersion: undefined,
-        latestVersion: undefined,
         appId: "927026912302362675",
         enabled: true,
         respectPrivateSession: true,
@@ -657,17 +772,18 @@ Vue.component("plugin.advancedrpc", {
           largeImage: "cover",
           largeImageKey: "applemusic",
           largeImageText: "{album}",
-          smallImage: true,
+          smallImage: "custom",
           smallImageKey: "play",
           smallImageText: "Playing",
+          fallbackImage: "applemusic",
           buttons: false,
           button1: {
-            label: "Listen on Cider",
-            url: "{ciderUrl}"
+            label: "Listen on Apple Music",
+            url: "{appleMusicUrl}"
           },
           button2: {
-            label: "View on Apple Music",
-            url: "{appleMusicUrl}"
+            label: "",
+            url: ""
           }
         },
         pause: {
@@ -677,28 +793,31 @@ Vue.component("plugin.advancedrpc", {
           largeImage: "cover",
           largeImageKey: "applemusic",
           largeImageText: "{album}",
-          smallImage: true,
+          smallImage: "custom",
           smallImageKey: "pause",
           smallImageText: "Paused",
+          fallbackImage: "applemusic",
           buttons: false,
           usePlayButtons: false,
           button1: {
-            label: "Listen on Cider",
-            url: "{ciderUrl}"
+            label: "Listen on Apple Music",
+            url: "{appleMusicUrl}"
           },
           button2: {
-            label: "View on Apple Music",
-            url: "{appleMusicUrl}"
+            label: "",
+            url: ""
           }
-        }
+        },
+        imageSize: 1024,
+        applySettings: "state",
+        presenceUpdateDelay: 0
       };
     }
   },
 
   methods: {
     update() {
-      let msg = "Are you sure you want to update AdvancedRPC? Your configuration won't be lost.";
-      app.confirm(msg, res => {
+      app.confirm("Are you sure you want to update AdvancedRPC?", res => {
         if (res) {
           ipcRenderer.once("plugin-installed", (event, arg) => {
             if (arg.success) {
@@ -721,6 +840,26 @@ Vue.component("plugin.advancedrpc", {
 
     reloadAdvancedRpc() {
       ipcRenderer.send("reloadAdvancedRpc");
+    },
+
+    updateSettings() {
+      ipcRenderer.invoke(`plugin.${PLUGIN_NAME}.updateSettings`, this.settings).then(() => {
+        notyf.success({
+          message: "Settings applied",
+          background: "#5865f2",
+          dismissible: true
+        });
+      });
+    },
+
+    showChangelog() {
+      document.getElementById("arpc-changelog").innerHTML = changelog;
+      this.changelogState = true;
+    },
+
+    hideChangelog() {
+      document.getElementById("arpc-changelog").innerHTML = "";
+      this.changelogState = false;
     }
 
   }
@@ -739,11 +878,10 @@ class AdvancedRpcFrontend {
     };
 
     CiderFrontAPI.AddMenuEntry(menuEntry);
-    ipcRenderer.invoke(`plugin.${PLUGIN_NAME}.setting`, getLocalStorage());
+    ipcRenderer.invoke(`plugin.${PLUGIN_NAME}.initSettings`, getLocalStorage());
+    checkForUpdates();
   }
 
 }
 
 new AdvancedRpcFrontend();
-
-module.exports = index_frontend;
