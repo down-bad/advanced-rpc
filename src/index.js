@@ -9,7 +9,7 @@ module.exports = class AdvancedRpcBackend {
 
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.0.0";
+    this.version = "[VI]{version}[/VI]";
     this.author = "down-bad (Vasilis#1517)";
 
     this._settings = {};
@@ -30,6 +30,8 @@ module.exports = class AdvancedRpcBackend {
       smallImageText: "",
       instance: false,
     };
+    this.updateDelay = null;
+    this.updateDelayQueue = 0;
   }
 
   /*******************************************************************************************
@@ -69,19 +71,43 @@ module.exports = class AdvancedRpcBackend {
 
   async onRendererReady(_win) {
     try {
-      ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
+      ipcMain.handle(`plugin.${this.name}.initSettings`, (_event, settings) => {
         if (!settings) return;
         this._prevSettings = this._settings;
         this._settings = settings;
-
-        if (this._prevSettings.appId === this._settings.appId)
-          this.setActivity(this._attributes);
 
         if (!this.init) {
           this.init = true;
           this.connect();
         }
       });
+
+      ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
+        if (!settings) return;
+
+        this._prevSettings = this._settings;
+        this._settings = settings;
+
+        if (this._settings.applySettings === "immediately") {
+          if (this._prevSettings.appId === this._settings.appId)
+            this.setActivity(this._attributes);
+        }
+
+        if (!this.init) {
+          this.init = true;
+          this.connect();
+        }
+      });
+
+      ipcMain.handle(
+        `plugin.${this.name}.updateSettings`,
+        (_event, settings) => {
+          if (!settings) return;
+          this._prevSettings = this._settings;
+          this._settings = settings;
+          this.setActivity(this._attributes);
+        }
+      );
     } catch {}
 
     this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
@@ -154,7 +180,7 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   setActivity(attributes) {
-    if (!this._client) return;
+    if (!this._client || !attributes) return;
 
     if (
       this._utils.getStoreValue("general.discordrpc.enabled") ||
@@ -165,6 +191,20 @@ module.exports = class AdvancedRpcBackend {
     ) {
       this._client.clearActivity();
       return;
+    }
+
+    if (this._settings.presenceUpdateDelay > 0) {
+      if (Date.now() > this.updateDelay) {
+        this.updateDelayQueue = 0;
+        this.updateDelay =
+          Date.now() + parseInt(this._settings.presenceUpdateDelay);
+      } else {
+        if (this.updateDelayQueue > 4) return;
+        return setTimeout(() => {
+          this.updateDelayQueue++;
+          this.setActivity(this._attributes);
+        }, this.updateDelay - Date.now());
+      }
     }
 
     let activity = {
@@ -179,17 +219,39 @@ module.exports = class AdvancedRpcBackend {
     activity.state = settings.state;
     activity.largeImageText = settings.largeImageText;
 
+    if (this._settings.imageSize < 1) this._settings.imageSize = 1024;
+
     if (settings.largeImage === "cover") {
-      activity.largeImageKey = attributes.artwork?.url
-        ?.replace("{w}", "1024")
-        .replace("{h}", "1024");
+      activity.largeImageKey =
+        attributes.artwork?.url
+          ?.replace("{w}", this._settings.imageSize ?? 1024)
+          .replace("{h}", this._settings.imageSize ?? 1024) ??
+        settings.fallbackImage;
+
+      if (
+        activity.largeImageKey !== settings.fallbackImage &&
+        !this.isValidUrl(activity.largeImageKey)
+      )
+        activity.largeImageKey = settings.fallbackImage;
     } else if (settings.largeImage === "custom") {
       activity.largeImageKey = settings.largeImageKey;
     }
 
-    if (settings.smallImage) {
+    activity.smallImageText = settings.smallImageText;
+    if (settings.smallImage === "cover") {
+      activity.smallImageKey =
+        attributes.artwork?.url
+          ?.replace("{w}", this._settings.imageSize ?? 1024)
+          .replace("{h}", this._settings.imageSize ?? 1024) ??
+        settings.fallbackImage;
+
+      if (
+        activity.smallImageKey !== settings.fallbackImage &&
+        !this.isValidUrl(activity.smallImageKey)
+      )
+        activity.smallImageKey = settings.fallbackImage;
+    } else if (settings.smallImage === "custom") {
       activity.smallImageKey = settings.smallImageKey;
-      activity.smallImageText = settings.smallImageText;
     }
 
     activity.buttons = [];
