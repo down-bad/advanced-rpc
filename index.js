@@ -1,4 +1,4 @@
-/* Version: 1.2.0 - August 4, 2022 23:44:31 */
+/* Version: 1.2.1 - August 9, 2022 21:43:33 */
 'use strict';
 
 var require$$0$1 = require('fs');
@@ -87318,7 +87318,7 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.2.0";
+    this.version = "1.2.1";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
     this._prevSettings = {};
@@ -87585,10 +87585,20 @@ var src = class AdvancedRpcBackend {
 
     const rpcTextVars = {
       artist: attributes.artistName,
+      "artist^": attributes.artistName?.toUpperCase(),
+      "artist*": attributes.artistName?.toLowerCase(),
       composer: attributes.composerName,
+      "composer^": attributes.composerName?.toUpperCase(),
+      "composer*": attributes.composerName?.toLowerCase(),
       title: attributes.name,
+      "title^": attributes.name?.toUpperCase(),
+      "title*": attributes.name?.toLowerCase(),
       album: attributes.albumName,
-      trackNumber: attributes.trackNumber
+      "album^": attributes.albumName?.toUpperCase(),
+      "album*": attributes.albumName?.toLowerCase(),
+      trackNumber: attributes.trackNumber,
+      "trackNumber^": attributes.trackNumber,
+      "trackNumber*": attributes.trackNumber
     },
           rpcUrlVars = {
       appleMusicUrl: attributes.url.appleMusic,

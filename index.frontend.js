@@ -1,4 +1,4 @@
-/* Version: 1.2.0 - August 4, 2022 23:44:31 */
+/* Version: 1.2.1 - August 9, 2022 21:43:33 */
 'use strict';
 
 const PLUGIN_NAME = "AdvancedRPC";
@@ -54,7 +54,7 @@ async function checkForUpdates() {
   }
 }
 
-let installedVersion = "1.2.0",
+let installedVersion = "1.2.1",
     latestVersion = undefined,
     changelog = undefined;
 Vue.component("plugin.advancedrpc", {
@@ -205,7 +205,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           First Line (details)
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -219,7 +219,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Second Line (state)
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -270,7 +270,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Large Image Text
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -308,7 +308,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Small Image Text
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -333,7 +333,8 @@ Vue.component("plugin.advancedrpc", {
           <small v-show="settings.play.buttons"
             ><b>Max label length</b>: 30 characters<br />
             <b>Max URL length</b>: 512 characters<br /><b>Label variables</b>:
-            {{textVariables}}<br /><b>URL variables</b>: {{urlVariables}}</small
+            {{textVariables}}<br />{{variableStyles}}<br /><b>URL variables</b>:
+            {{urlVariables}}</small
           >
         </div>
         <div
@@ -382,7 +383,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           First Line (details)
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -396,7 +397,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Second Line (state)
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -434,7 +435,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Large Image Text
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -472,7 +473,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Small Image Text
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -517,7 +518,8 @@ Vue.component("plugin.advancedrpc", {
           <small v-show="settings.pause.buttons"
             ><b>Max label length:</b> 30 characters<br />
             <b>Max URL length:</b> 512 characters<br /><b>Label variables</b>:
-            {{textVariables}}<br /><b>URL variables</b>: {{urlVariables}}</small
+            {{textVariables}}<br />{{variableStyles}}<br /><b>URL variables</b>:
+            {{urlVariables}}</small
           >
         </div>
         <div
@@ -574,13 +576,9 @@ Vue.component("plugin.advancedrpc", {
     <div class="arpc-option">
       <div class="arpc-option-segment">
         Presence Update Delay (in milliseconds)
-        <small
-          >By default, AdvancedRPC will try to update your Discord presence info
-          as soon as possible. However, trying to do that rapidly (such as when
-          changing songs fast) can create issues like rate limits (your presence
-          freezing for other users). This option could solve this issue by
-          putting a delay after a presence update occurs. <br />
-          Recommended value: 5000 (5 seconds)
+        <small>
+          Puts a delay after updating your Discord presence in order to avoid
+          rate limits such as when switching songs fast.
         </small>
       </div>
       <div class="arpc-option-segment arpc-option-segment_auto">
@@ -594,11 +592,11 @@ Vue.component("plugin.advancedrpc", {
 
     <div class="arpc-option">
       <div class="arpc-option-segment">
-        Artwork / Cover Image Size
+        Artwork Image Size
         <small
-          >Changes the width and height of the artwork / playlist cover when
-          used in the presence. Larger values might cause the artwork to take
-          longer to load.</small
+          >Changes the width and height of the artwork when used in the
+          presence. Larger values might cause the artwork to take longer to load
+          for others.</small
         >
       </div>
       <div class="arpc-option-segment arpc-option-segment_auto">
@@ -665,7 +663,6 @@ Vue.component("plugin.advancedrpc", {
     <a href="https://ko-fi.com/vasii" target="_blank">Donate</a>
   </footer>
 </div>
-
   `,
   data: () => ({
     settings: {
@@ -724,9 +721,10 @@ Vue.component("plugin.advancedrpc", {
     latestVersion: latestVersion,
     changelog: changelog,
     changelogState: false,
-    versionInfo: "1.2.0 - August 4, 2022 23:44:31",
+    versionInfo: "1.2.1 - August 9, 2022 21:43:33",
     textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
-    urlVariables: "{appleMusicUrl}, {ciderUrl}"
+    urlVariables: "{appleMusicUrl}, {ciderUrl}",
+    variableStyles: "{variable^} for uppercase, {variable*} for lowercase"
   }),
   watch: {
     settings: {
