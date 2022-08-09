@@ -1,3 +1,4 @@
 {
-  "1.2.0": "Added advanced settings, improved UI & fixed bugs. This is a placeholder changelog."
+  "1.2.0": "Added advanced settings, improved UI & fixed bugs. This is a placeholder changelog.",
+  "1.2.1": "Ability to convert variables to uppercase and lowercase<br />Tweaked some option descriptions and removed a reference of an unreleased setting"
 }
