@@ -330,10 +330,20 @@ module.exports = class AdvancedRpcBackend {
 
     const rpcTextVars = {
         artist: attributes.artistName,
+        "artist^": attributes.artistName?.toUpperCase(),
+        "artist*": attributes.artistName?.toLowerCase(),
         composer: attributes.composerName,
+        "composer^": attributes.composerName?.toUpperCase(),
+        "composer*": attributes.composerName?.toLowerCase(),
         title: attributes.name,
+        "title^": attributes.name?.toUpperCase(),
+        "title*": attributes.name?.toLowerCase(),
         album: attributes.albumName,
+        "album^": attributes.albumName?.toUpperCase(),
+        "album*": attributes.albumName?.toLowerCase(),
         trackNumber: attributes.trackNumber,
+        "trackNumber^": attributes.trackNumber,
+        "trackNumber*": attributes.trackNumber,
       },
       rpcUrlVars = {
         appleMusicUrl: attributes.url.appleMusic,

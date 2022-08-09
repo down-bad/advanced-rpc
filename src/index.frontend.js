@@ -201,7 +201,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           First Line (details)
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -215,7 +215,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Second Line (state)
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -266,7 +266,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Large Image Text
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -304,7 +304,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Small Image Text
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -329,7 +329,8 @@ Vue.component("plugin.advancedrpc", {
           <small v-show="settings.play.buttons"
             ><b>Max label length</b>: 30 characters<br />
             <b>Max URL length</b>: 512 characters<br /><b>Label variables</b>:
-            {{textVariables}}<br /><b>URL variables</b>: {{urlVariables}}</small
+            {{textVariables}}<br />{{variableStyles}}<br /><b>URL variables</b>:
+            {{urlVariables}}</small
           >
         </div>
         <div
@@ -378,7 +379,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           First Line (details)
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -392,7 +393,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Second Line (state)
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -430,7 +431,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Large Image Text
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -468,7 +469,7 @@ Vue.component("plugin.advancedrpc", {
         <div class="arpc-option-segment">
           Small Image Text
           <small
-            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}</small
+            >Max 128 characters<br /><b>Variables</b>: {{textVariables}}<br />{{variableStyles}}</small
           >
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -513,7 +514,8 @@ Vue.component("plugin.advancedrpc", {
           <small v-show="settings.pause.buttons"
             ><b>Max label length:</b> 30 characters<br />
             <b>Max URL length:</b> 512 characters<br /><b>Label variables</b>:
-            {{textVariables}}<br /><b>URL variables</b>: {{urlVariables}}</small
+            {{textVariables}}<br />{{variableStyles}}<br /><b>URL variables</b>:
+            {{urlVariables}}</small
           >
         </div>
         <div
@@ -723,6 +725,7 @@ Vue.component("plugin.advancedrpc", {
     versionInfo: "[VI]{version} - {date}[/VI]",
     textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
     urlVariables: "{appleMusicUrl}, {ciderUrl}",
+    variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
   }),
   watch: {
     settings: {
