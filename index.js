@@ -1,4 +1,4 @@
-/* Version: 1.2.1 - August 9, 2022 21:43:33 */
+/* Version: 1.3.0 - September 4, 2022 03:10:06 */
 'use strict';
 
 var require$$0$1 = require('fs');
@@ -87318,10 +87318,11 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.2.1";
+    this.version = "1.3.0";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
     this._prevSettings = {};
+    this._initSettings = {};
     this.init = false;
     this._utils = env.utils;
     this._attributes = undefined;
@@ -87350,7 +87351,7 @@ var src = class AdvancedRpcBackend {
 
   onReady(_win) {
     console.log(`[Plugin][${this.name}] Ready.`);
-    ipcMain.on("reloadAdvancedRpc", () => {
+    ipcMain.on(`plugin.${this.name}.reload`, () => {
       console.log(`[Plugin][${this.name}][reload] Reloading ${this.name}.`);
 
       this._client.clearActivity();
@@ -87387,11 +87388,20 @@ var src = class AdvancedRpcBackend {
       });
       ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
         if (!settings) return;
-        this._prevSettings = this._settings;
-        this._settings = settings;
+        this._settings.applySettings = settings.applySettings;
+        if (Object.keys(this._initSettings).length === 0) this._initSettings = this._settings;else this._initSettings.applySettings = this._settings.applySettings;
 
-        if (this._settings.applySettings === "immediately") {
-          if (this._prevSettings.appId === this._settings.appId) this.setActivity(this._attributes);
+        if (settings.applySettings === "manually") {
+          if (JSON.stringify(this._initSettings) === JSON.stringify(settings)) this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);else this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, true);
+        } else {
+          this._prevSettings = this._settings;
+          this._settings = settings;
+
+          if (settings.applySettings === "state") {
+            if (JSON.stringify(this._initSettings) === JSON.stringify(settings)) this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);else this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, true);
+          } else {
+            if (this._prevSettings.appId === this._settings.appId) this.setActivity(this._attributes);
+          }
         }
 
         if (!this.init) {
@@ -87399,15 +87409,28 @@ var src = class AdvancedRpcBackend {
           this.connect();
         }
       });
+      ipcMain.handle(`plugin.${this.name}.resetChanges`, _event => {
+        if (Object.keys(this._initSettings).length !== 0) {
+          this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+
+          this._utils.getWindow().webContents.send(`plugin.${this.name}.setPrevSettings`, this._initSettings);
+        }
+      });
       ipcMain.handle(`plugin.${this.name}.updateSettings`, (_event, settings) => {
         if (!settings) return;
         this._prevSettings = this._settings;
         this._settings = settings;
+        this._initSettings = {};
+
+        this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+
         this.setActivity(this._attributes);
       });
     } catch {}
 
     this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
+
+    this._env.utils.loadJSFrontend(join(this._env.dir, "frontend-vue.js"));
   }
   /**
    * Runs on app stop
@@ -87477,9 +87500,15 @@ var src = class AdvancedRpcBackend {
 
 
   setActivity(attributes) {
+    if (this._settings.applySettings !== "manually") {
+      this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+
+      this._initSettings = {};
+    }
+
     if (!this._client || !attributes) return;
 
-    if (this._utils.getStoreValue("general.discordrpc.enabled") || this._utils.getStoreValue("connectivity.discord_rpc.enabled") || !this._settings.enabled || this._settings.respectPrivateSession && this._utils.getStoreValue("general.privateEnabled")) {
+    if (this._utils.getStoreValue("general.discordrpc.enabled") || this._utils.getStoreValue("connectivity.discord_rpc.enabled") || !this._settings.enabled || this._settings.respectPrivateSession && this._utils.getStoreValue("general.privateEnabled") || attributes.playParams?.id === "no-id-found") {
       this._client.clearActivity();
 
       return;
@@ -87583,27 +87612,50 @@ var src = class AdvancedRpcBackend {
       if (this._settings.play.timestamp === "remaining") activity.endTimestamp = attributes.endTime;
     }
 
-    const rpcTextVars = {
+    let rpcTextVars = {
       artist: attributes.artistName,
-      "artist^": attributes.artistName?.toUpperCase(),
-      "artist*": attributes.artistName?.toLowerCase(),
       composer: attributes.composerName,
-      "composer^": attributes.composerName?.toUpperCase(),
-      "composer*": attributes.composerName?.toLowerCase(),
       title: attributes.name,
-      "title^": attributes.name?.toUpperCase(),
-      "title*": attributes.name?.toLowerCase(),
       album: attributes.albumName,
-      "album^": attributes.albumName?.toUpperCase(),
-      "album*": attributes.albumName?.toLowerCase(),
-      trackNumber: attributes.trackNumber,
-      "trackNumber^": attributes.trackNumber,
-      "trackNumber*": attributes.trackNumber
-    },
-          rpcUrlVars = {
+      trackNumber: attributes.trackNumber
+    };
+    const rpcUrlVars = {
       appleMusicUrl: attributes.url.appleMusic,
       ciderUrl: attributes.url.cider
-    }; // Apply text variables
+    },
+          keyVars = ["details", "state", "largeImageText", "smallImageText", "largeImageKey", "smallImageKey", "fallbackImage"]; // Create uppercase and lowercase variables
+
+    for (const [key, value] of Object.entries(rpcTextVars)) {
+      if (typeof value === "string") {
+        rpcTextVars[`${key}^`] = value.toUpperCase();
+        rpcTextVars[`${key}*`] = value.toLowerCase();
+      }
+    } // Create play variables
+
+
+    keyVars.forEach(key => {
+      let value = this._settings.play[key];
+      Object.keys(rpcTextVars).forEach(rpcTextVar => {
+        if (typeof value === "string" && value.includes(`{${rpcTextVar}}`)) {
+          value = value.replace(`{${rpcTextVar}}`, rpcTextVars[rpcTextVar]);
+        }
+      });
+      rpcTextVars[`play.${key}`] = value;
+      rpcTextVars[`play.${key}^`] = value?.toUpperCase();
+      rpcTextVars[`play.${key}*`] = value?.toLowerCase();
+    }); // Create pause variables
+
+    keyVars.forEach(key => {
+      let value = this._settings.pause[key];
+      Object.keys(rpcTextVars).forEach(rpcTextVar => {
+        if (typeof value === "string" && value.includes(`{${rpcTextVar}}`)) {
+          value = value.replace(`{${rpcTextVar}}`, rpcTextVars[rpcTextVar]);
+        }
+      });
+      rpcTextVars[`pause.${key}`] = value;
+      rpcTextVars[`pause.${key}^`] = value?.toUpperCase();
+      rpcTextVars[`pause.${key}*`] = value?.toLowerCase();
+    }); // Apply text variables
 
     Object.keys(rpcTextVars).forEach(key => {
       if (activity.details?.includes(`{${key}}`)) {
@@ -87706,7 +87758,9 @@ var src = class AdvancedRpcBackend {
     }
 
     if (!activity.details) delete activity.details;
+    if (activity.details?.length === 1) activity.details += " ";
     if (!activity.state) delete activity.state;
+    if (activity.state?.length === 1) activity.state += " ";
     if (!activity.largeImageText) delete activity.largeImageText;
     if (activity.largeImageText?.length === 1) activity.largeImageText = ` ${activity.largeImageText} `;
     if (!activity.smallImageText) delete activity.smallImageText;
