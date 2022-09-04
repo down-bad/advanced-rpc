@@ -13,7 +13,11 @@ const OUTPUT_DIR =
   DEV && process.env.OUTPUT_DIR ? process.env.OUTPUT_DIR : "dist";
 
 export default {
-  input: ["src/index.js", "src/index.frontend.js"],
+  input: [
+    "src/index.js",
+    "src/index.frontend.js",
+    "src/components/frontend-vue.js",
+  ],
   output: {
     dir: OUTPUT_DIR,
     format: "cjs",

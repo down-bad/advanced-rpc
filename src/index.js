@@ -14,6 +14,7 @@ module.exports = class AdvancedRpcBackend {
 
     this._settings = {};
     this._prevSettings = {};
+    this._initSettings = {};
     this.init = false;
 
     this._utils = env.utils;
@@ -44,7 +45,7 @@ module.exports = class AdvancedRpcBackend {
   onReady(_win) {
     console.log(`[Plugin][${this.name}] Ready.`);
 
-    ipcMain.on("reloadAdvancedRpc", () => {
+    ipcMain.on(`plugin.${this.name}.reload`, () => {
       console.log(`[Plugin][${this.name}][reload] Reloading ${this.name}.`);
       this._client.clearActivity();
       this._client.destroy();
@@ -85,17 +86,63 @@ module.exports = class AdvancedRpcBackend {
       ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
         if (!settings) return;
 
-        this._prevSettings = this._settings;
-        this._settings = settings;
+        this._settings.applySettings = settings.applySettings;
 
-        if (this._settings.applySettings === "immediately") {
-          if (this._prevSettings.appId === this._settings.appId)
-            this.setActivity(this._attributes);
+        if (Object.keys(this._initSettings).length === 0)
+          this._initSettings = this._settings;
+        else this._initSettings.applySettings = this._settings.applySettings;
+
+        if (settings.applySettings === "manually") {
+          if (JSON.stringify(this._initSettings) === JSON.stringify(settings))
+            this._utils
+              .getWindow()
+              .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+          else
+            this._utils
+              .getWindow()
+              .webContents.send(`plugin.${this.name}.unappliedSettings`, true);
+        } else {
+          this._prevSettings = this._settings;
+          this._settings = settings;
+
+          if (settings.applySettings === "state") {
+            if (JSON.stringify(this._initSettings) === JSON.stringify(settings))
+              this._utils
+                .getWindow()
+                .webContents.send(
+                  `plugin.${this.name}.unappliedSettings`,
+                  false
+                );
+            else
+              this._utils
+                .getWindow()
+                .webContents.send(
+                  `plugin.${this.name}.unappliedSettings`,
+                  true
+                );
+          } else {
+            if (this._prevSettings.appId === this._settings.appId)
+              this.setActivity(this._attributes);
+          }
         }
 
         if (!this.init) {
           this.init = true;
           this.connect();
+        }
+      });
+
+      ipcMain.handle(`plugin.${this.name}.resetChanges`, (_event) => {
+        if (Object.keys(this._initSettings).length !== 0) {
+          this._utils
+            .getWindow()
+            .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+          this._utils
+            .getWindow()
+            .webContents.send(
+              `plugin.${this.name}.setPrevSettings`,
+              this._initSettings
+            );
         }
       });
 
@@ -105,12 +152,17 @@ module.exports = class AdvancedRpcBackend {
           if (!settings) return;
           this._prevSettings = this._settings;
           this._settings = settings;
+          this._initSettings = {};
+          this._utils
+            .getWindow()
+            .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
           this.setActivity(this._attributes);
         }
       );
     } catch {}
 
     this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
+    this._env.utils.loadJSFrontend(join(this._env.dir, "frontend-vue.js"));
   }
 
   /**
@@ -180,6 +232,13 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   setActivity(attributes) {
+    if (this._settings.applySettings !== "manually") {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      this._initSettings = {};
+    }
+
     if (!this._client || !attributes) return;
 
     if (
@@ -187,7 +246,8 @@ module.exports = class AdvancedRpcBackend {
       this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
       !this._settings.enabled ||
       (this._settings.respectPrivateSession &&
-        this._utils.getStoreValue("general.privateEnabled"))
+        this._utils.getStoreValue("general.privateEnabled")) ||
+      attributes.playParams?.id === "no-id-found"
     ) {
       this._client.clearActivity();
       return;
@@ -328,27 +388,65 @@ module.exports = class AdvancedRpcBackend {
         activity.endTimestamp = attributes.endTime;
     }
 
-    const rpcTextVars = {
-        artist: attributes.artistName,
-        "artist^": attributes.artistName?.toUpperCase(),
-        "artist*": attributes.artistName?.toLowerCase(),
-        composer: attributes.composerName,
-        "composer^": attributes.composerName?.toUpperCase(),
-        "composer*": attributes.composerName?.toLowerCase(),
-        title: attributes.name,
-        "title^": attributes.name?.toUpperCase(),
-        "title*": attributes.name?.toLowerCase(),
-        album: attributes.albumName,
-        "album^": attributes.albumName?.toUpperCase(),
-        "album*": attributes.albumName?.toLowerCase(),
-        trackNumber: attributes.trackNumber,
-        "trackNumber^": attributes.trackNumber,
-        "trackNumber*": attributes.trackNumber,
-      },
-      rpcUrlVars = {
+    let rpcTextVars = {
+      artist: attributes.artistName,
+      composer: attributes.composerName,
+      title: attributes.name,
+      album: attributes.albumName,
+      trackNumber: attributes.trackNumber,
+    };
+
+    const rpcUrlVars = {
         appleMusicUrl: attributes.url.appleMusic,
         ciderUrl: attributes.url.cider,
-      };
+      },
+      keyVars = [
+        "details",
+        "state",
+        "largeImageText",
+        "smallImageText",
+        "largeImageKey",
+        "smallImageKey",
+        "fallbackImage",
+      ];
+
+    // Create uppercase and lowercase variables
+    for (const [key, value] of Object.entries(rpcTextVars)) {
+      if (typeof value === "string") {
+        rpcTextVars[`${key}^`] = value.toUpperCase();
+        rpcTextVars[`${key}*`] = value.toLowerCase();
+      }
+    }
+
+    // Create play variables
+    keyVars.forEach((key) => {
+      let value = this._settings.play[key];
+
+      Object.keys(rpcTextVars).forEach((rpcTextVar) => {
+        if (typeof value === "string" && value.includes(`{${rpcTextVar}}`)) {
+          value = value.replace(`{${rpcTextVar}}`, rpcTextVars[rpcTextVar]);
+        }
+      });
+
+      rpcTextVars[`play.${key}`] = value;
+      rpcTextVars[`play.${key}^`] = value?.toUpperCase();
+      rpcTextVars[`play.${key}*`] = value?.toLowerCase();
+    });
+
+    // Create pause variables
+    keyVars.forEach((key) => {
+      let value = this._settings.pause[key];
+
+      Object.keys(rpcTextVars).forEach((rpcTextVar) => {
+        if (typeof value === "string" && value.includes(`{${rpcTextVar}}`)) {
+          value = value.replace(`{${rpcTextVar}}`, rpcTextVars[rpcTextVar]);
+        }
+      });
+
+      rpcTextVars[`pause.${key}`] = value;
+      rpcTextVars[`pause.${key}^`] = value?.toUpperCase();
+      rpcTextVars[`pause.${key}*`] = value?.toLowerCase();
+    });
 
     // Apply text variables
     Object.keys(rpcTextVars).forEach((key) => {
@@ -490,7 +588,9 @@ module.exports = class AdvancedRpcBackend {
     }
 
     if (!activity.details) delete activity.details;
+    if (activity.details?.length === 1) activity.details += " ";
     if (!activity.state) delete activity.state;
+    if (activity.state?.length === 1) activity.state += " ";
     if (!activity.largeImageText) delete activity.largeImageText;
     if (activity.largeImageText?.length === 1)
       activity.largeImageText = ` ${activity.largeImageText} `;
