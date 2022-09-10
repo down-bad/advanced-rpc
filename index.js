@@ -1,4 +1,4 @@
-/* Version: 1.3.0 - September 4, 2022 03:10:06 */
+/* Version: 1.3.1 - September 10, 2022 04:16:25 */
 'use strict';
 
 var require$$0$1 = require('fs');
@@ -87318,7 +87318,7 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.3.0";
+    this.version = "1.3.1";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
     this._prevSettings = {};
@@ -87620,8 +87620,8 @@ var src = class AdvancedRpcBackend {
       trackNumber: attributes.trackNumber
     };
     const rpcUrlVars = {
-      appleMusicUrl: attributes.url.appleMusic,
-      ciderUrl: attributes.url.cider
+      appleMusicUrl: `${attributes.url.appleMusic}?src=arpc`,
+      ciderUrl: `${attributes.url.cider}?src=arpc`
     },
           keyVars = ["details", "state", "largeImageText", "smallImageText", "largeImageKey", "smallImageKey", "fallbackImage"]; // Create uppercase and lowercase variables
 
@@ -87692,7 +87692,7 @@ var src = class AdvancedRpcBackend {
         }
 
         if (activity.buttons[1]?.url?.includes(`{${key}}`)) {
-          activity.buttons[1].url = activity.buttons[0].url.replace(`{${key}}`, rpcUrlVars[key]);
+          activity.buttons[1].url = activity.buttons[1].url.replace(`{${key}}`, rpcUrlVars[key]);
         }
       });
     } // Substring details if needed

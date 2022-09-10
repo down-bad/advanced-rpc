@@ -1,10 +1,11 @@
-/* Version: 1.3.0 - September 4, 2022 03:10:06 */
+/* Version: 1.3.1 - September 10, 2022 04:16:25 */
 'use strict';
 
 class AdvancedRpcFrontend {
   PLUGIN_NAME = "AdvancedRPC";
   SETTINGS_KEY = "settings";
-  installedVersion = "1.3.0";
+  remoteData = null;
+  installedVersion = "1.3.1";
   latestVersion = undefined;
   changelog = undefined;
   unappliedSettings = false;
@@ -74,6 +75,12 @@ class AdvancedRpcFrontend {
       this.changelog = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/changelog.html").then(response => response.text());
     } catch (e) {
       this.changelog = "Failed to fetch changelog";
+    }
+
+    if (init) {
+      try {
+        this.remoteData = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json").then(response => response.json());
+      } catch (e) {}
     }
   }
 

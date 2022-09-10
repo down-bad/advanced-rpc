@@ -1,4 +1,4 @@
-/* Version: 1.3.0 - September 4, 2022 03:10:06 */
+/* Version: 1.3.1 - September 10, 2022 04:16:25 */
 'use strict';
 
 Vue.component("plugin.advancedrpc", {
@@ -50,57 +50,44 @@ Vue.component("plugin.advancedrpc", {
 
     <div class="arpc-settings">
       <div class="arpc-header">
-        <h1>AdvancedRPC</h1>
-      </div>
-
-      <div
-        class="arpc-bubble arpc-warning"
-        v-if="app.cfg.connectivity.discord_rpc.enabled"
-      >
-        <div class="arpc-bubble-icon">
-          <svg
-            class="arpc-bubble-icon"
-            aria-hidden="false"
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-          >
-            <path
-              d="M10 0C4.486 0 0 4.486 0 10C0 15.515 4.486 20 10 20C15.514 20 20 15.515 20 10C20 4.486 15.514 0 10 0ZM9 4H11V11H9V4ZM10 15.25C9.31 15.25 8.75 14.691 8.75 14C8.75 13.31 9.31 12.75 10 12.75C10.69 12.75 11.25 13.31 11.25 14C11.25 14.691 10.69 15.25 10 15.25Z"
-              fill="#faa81a"
-            ></path>
-          </svg>
-        </div>
-        <div class="arpc-bubble-text">
-          Please disable Cider's Discord Rich Presence in
-          {{$root.getLz('term.settings')}} >
-          {{$root.getLz('settings.header.connectivity')}} and restart the app.
+        <div class="arpc-header-left">
+          <img
+            v-if="remoteData?.titleDecorations?.leftImage"
+            :src="remoteData?.titleDecorations?.leftImage"
+            width="40"
+            height="40"
+            draggable="false"
+          />
+          <h1>AdvancedRPC</h1>
+          <img
+            v-if="remoteData?.titleDecorations?.rightImage"
+            :src="remoteData?.titleDecorations?.rightImage"
+            width="40"
+            height="40"
+            draggable="false"
+          />
         </div>
       </div>
 
-      <div
-        class="arpc-bubble arpc-info"
+      <vue-bubble
         v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
-      >
-        <div class="arpc-bubble-icon">
-          <svg
-            class="arpc-bubble-icon"
-            aria-hidden="false"
-            width="16"
-            height="16"
-            viewBox="0 0 12 12"
-          >
-            <path
-              fill="#00aff4"
-              d="M6 1C3.243 1 1 3.244 1 6c0 2.758 2.243 5 5 5s5-2.242 5-5c0-2.756-2.243-5-5-5zm0 2.376a.625.625 0 110 1.25.625.625 0 010-1.25zM7.5 8.5h-3v-1h1V6H5V5h1a.5.5 0 01.5.5v2h1v1z"
-            ></path>
-          </svg>
-        </div>
-        <div class="arpc-bubble-text">
-          Private Session is currently enabled, your Discord presence won't be
-          displayed.
-        </div>
-      </div>
+        :message="strings.private_session_enabled"
+        icon="info"
+        color="#00aff4"
+      ></vue-bubble>
+
+      <vue-bubble
+        v-if="app.cfg.connectivity.discord_rpc.enabled"
+        :message="strings.disable_cider_rpc"
+        icon="warning"
+        color="#faa81a"
+      ></vue-bubble>
+
+      <vue-bubble
+        v-for="bubble in remoteData?.bubbles"
+        v-if="bubble?.enabled"
+        v-bind="bubble"
+      ></vue-bubble>
 
       <div class="arpc-option-container">
         <div
@@ -140,7 +127,7 @@ Vue.component("plugin.advancedrpc", {
         </div>
 
         <div :disabled="app.cfg.connectivity.discord_rpc.enabled">
-          <div class="arpc-option">
+          <div class="arpc-option arpc-opacity-transition">
             <div class="arpc-option-segment">Enable AdvancedRPC</div>
             <div class="arpc-option-segment arpc-option-segment_auto">
               <label>
@@ -850,12 +837,17 @@ Vue.component("plugin.advancedrpc", {
     installedVersion: AdvancedRpc.installedVersion,
     latestVersion: AdvancedRpc.latestVersion,
     unappliedSettings: AdvancedRpc.unappliedSettings,
-    versionInfo: "1.3.0 - September 4, 2022 03:10:06",
+    versionInfo: "1.3.1 - September 10, 2022 04:16:25",
     textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
     urlVariables: "{appleMusicUrl}, {ciderUrl}",
     variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
     changelogState: false,
-    variablesModalState: false
+    variablesModalState: false,
+    remoteData: AdvancedRpc.remoteData,
+    strings: {
+      disable_cider_rpc: `Please disable Cider's Discord Rich Presence in ${app.getLz("term.settings")} > ${app.getLz("settings.header.connectivity")} and restart the app.`,
+      private_session_enabled: "Private Session is currently enabled, your Discord presence won't be displayed."
+    }
   }),
   watch: {
     settings: {
@@ -978,105 +970,107 @@ Vue.component("plugin.advancedrpc", {
 });
 Vue.component("vue-variables-modal", {
   template: `
-  <div class="arpc-modal-layer" @click.self="$emit('close-variables')">
-  <div class="arpc-modal-window">
-    <div class="arpc-modal-header">
-      <div>Variables</div>
-      <vue-close-button @close="$emit('close-variables')"></vue-close-button>
+    <div class="arpc-modal-layer" @click.self="$emit('close-variables')">
+      <div class="arpc-modal-window">
+        <div class="arpc-modal-header">
+          <div>Variables</div>
+          <vue-close-button
+            @close="$emit('close-variables')"
+          ></vue-close-button>
+        </div>
+        <div class="arpc-modal-content">
+          <h4>Text Variables</h4>
+          <div id="arpc-variables">
+            <div>{title}</div>
+            <div>{artist}</div>
+            <div>{album}</div>
+            <div>{composer}</div>
+            <div>{trackNumber}</div>
+          </div>
+
+          <h4>Playback Variables</h4>
+          <div id="arpc-variables">
+            <div>{play.details}</div>
+            <div>{play.state}</div>
+            <div>{play.largeImageText}</div>
+            <div>{play.smallImageText}</div>
+            <div>{play.largeImageKey}</div>
+            <div>{play.smallImageKey}</div>
+            <div>{play.fallbackImage}</div>
+          </div>
+
+          <h4>Pause Variables</h4>
+          <div id="arpc-variables">
+            <div>{pause.details}</div>
+            <div>{pause.state}</div>
+            <div>{pause.largeImageText}</div>
+            <div>{pause.smallImageText}</div>
+            <div>{pause.largeImageKey}</div>
+            <div>{pause.smallImageKey}</div>
+            <div>{pause.fallbackImage}</div>
+          </div>
+
+          <h4>Variables Style</h4>
+          <div id="arpc-variables">
+            <div>{variable^}</div>
+            for uppercase
+          </div>
+          <div id="arpc-variables">
+            <div>{variable*}</div>
+            for lowercase
+          </div>
+
+          <h4>URL Variables</h4>
+          <div id="arpc-variables">
+            <div>{appleMusicUrl}</div>
+            <div>{ciderUrl}</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="arpc-modal-content">
-      <h4>Text Variables</h4>
-      <div id="arpc-variables">
-        <div>{title}</div>
-        <div>{artist}</div>
-        <div>{album}</div>
-        <div>{composer}</div>
-        <div>{trackNumber}</div>
-      </div>
-
-      <h4>Playback Variables</h4>
-      <div id="arpc-variables">
-        <div>{play.details}</div>
-        <div>{play.state}</div>
-        <div>{play.largeImageText}</div>
-        <div>{play.smallImageText}</div>
-        <div>{play.largeImageKey}</div>
-        <div>{play.smallImageKey}</div>
-        <div>{play.fallbackImage}</div>
-      </div>
-
-      <h4>Pause Variables</h4>
-      <div id="arpc-variables">
-        <div>{pause.details}</div>
-        <div>{pause.state}</div>
-        <div>{pause.largeImageText}</div>
-        <div>{pause.smallImageText}</div>
-        <div>{pause.largeImageKey}</div>
-        <div>{pause.smallImageKey}</div>
-        <div>{pause.fallbackImage}</div>
-      </div>
-
-      <h4>Variables Style</h4>
-      <div id="arpc-variables">
-        <div>{variable^}</div>
-        for uppercase
-      </div>
-      <div id="arpc-variables">
-        <div>{variable*}</div>
-        for lowercase
-      </div>
-
-      <h4>URL Variables</h4>
-      <div id="arpc-variables">
-        <div>{appleMusicUrl}</div>
-        <div>{ciderUrl}</div>
-      </div>
-    </div>
-  </div>
-</div>
-
   `
 });
 Vue.component("vue-changelog", {
   template: `
-  <div class="arpc-modal-layer" @click.self="$emit('close-changelog')">
-  <div class="arpc-modal-window arpc-changelog-window">
-    <div class="arpc-modal-header">
-      <div>What's New</div>
-      <vue-close-button @close="$emit('close-changelog')"></vue-close-button>
-    </div>
-    <div class="arpc-modal-content" id="arpc-changelog"></div>
-    <div class="arpc-modal-footer">
-      <div v-if="checkingForUpdate === true">Checking for updates...</div>
-      <div v-else-if="latestVersion > installedVersion">
-        There is a new update available!<br />Installed version:
-        {{installedVersion}}
-      </div>
-      <div v-else-if="latestVersion <= installedVersion">
-        No update available.
-      </div>
-      <div v-else>Error checking for updates.</div>
+    <div class="arpc-modal-layer" @click.self="$emit('close-changelog')">
+      <div class="arpc-modal-window arpc-changelog-window">
+        <div class="arpc-modal-header">
+          <div>What's New</div>
+          <vue-close-button
+            @close="$emit('close-changelog')"
+          ></vue-close-button>
+        </div>
+        <div class="arpc-modal-content" id="arpc-changelog"></div>
+        <div class="arpc-modal-footer">
+          <div v-if="checkingForUpdate === true">Checking for updates...</div>
+          <div v-else-if="latestVersion > installedVersion">
+            There is a new update available!<br />Installed version:
+            {{installedVersion}}
+          </div>
+          <div v-else-if="latestVersion <= installedVersion">
+            No update available.
+          </div>
+          <div v-else>Error checking for updates.</div>
 
-      <button
-        v-if="updating"
-        class="arpc-button arpc-button-blue"
-        :disabled="true"
-      >
-        Updating...
-      </button>
-      <button
-        v-else
-        :disabled="checkingForUpdate || !latestVersion || latestVersion <= installedVersion"
-        class="arpc-button arpc-button-blue"
-        id="arpc-update-button"
-        @click="update()"
-      >
-        Update
-      </button>
+          <button
+            v-if="updating"
+            class="arpc-button arpc-button-blue"
+            :disabled="true"
+          >
+            Updating...
+          </button>
+          <button
+            v-else
+            :disabled="checkingForUpdate || !latestVersion || latestVersion <= installedVersion"
+            class="arpc-button arpc-button-blue"
+            id="arpc-update-button"
+            @click="update()"
+          >
+            Update
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-
   `,
   data: () => ({
     changelog: AdvancedRpc.changelog,
@@ -1115,21 +1109,95 @@ Vue.component("vue-changelog", {
 });
 Vue.component("vue-close-button", {
   template: `
-  <button @click="$emit('close')" class="arpc-close-button">
-  <svg
-    class="arpc-close-button"
-    aria-hidden="true"
-    role="img"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-  >
-    <path
-      fill="#DCDDDE"
-      d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"
-    ></path>
-  </svg>
-</button>
+    <button @click="$emit('close')" class="arpc-close-button">
+      <svg
+        class="arpc-close-button"
+        aria-hidden="true"
+        role="img"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+      >
+        <path
+          fill="#DCDDDE"
+          d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"
+        ></path>
+      </svg>
+    </button>
+  `
+});
+Vue.component("vue-bubble", {
+  props: ["enabled", "message", "url", "icon", "color", "backgroundColor", "textColor", "iconColor", "versions", "versionsSmallerThan"],
+  template: `
+  <div
+  v-if="checkVersions()"
+  class="arpc-bubble"
+  :style="{'border-color': color, 'background': backgroundColor || color + '1a', 'cursor': url ? 'pointer' : 'default'}"
+  @click="url && redirectToLink(url)"
+>
+  <div v-if="icon" class="arpc-bubble-icon">
+    <svg
+      v-if="icon === 'warning'"
+      class="arpc-bubble-icon arpc-warning-icon"
+      aria-hidden="false"
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+    >
+      <path
+        :style="{'fill': iconColor || color}"
+        d="M10 0C4.486 0 0 4.486 0 10C0 15.515 4.486 20 10 20C15.514 20 20 15.515 20 10C20 4.486 15.514 0 10 0ZM9 4H11V11H9V4ZM10 15.25C9.31 15.25 8.75 14.691 8.75 14C8.75 13.31 9.31 12.75 10 12.75C10.69 12.75 11.25 13.31 11.25 14C11.25 14.691 10.69 15.25 10 15.25Z"
+      ></path>
+    </svg>
 
-`
+    <svg
+      v-else-if="icon === 'info'"
+      class="arpc-bubble-icon"
+      aria-hidden="false"
+      width="16"
+      height="16"
+      viewBox="0 0 12 12"
+    >
+      <path
+        :style="{'fill': iconColor || color}"
+        d="M6 1C3.243 1 1 3.244 1 6c0 2.758 2.243 5 5 5s5-2.242 5-5c0-2.756-2.243-5-5-5zm0 2.376a.625.625 0 110 1.25.625.625 0 010-1.25zM7.5 8.5h-3v-1h1V6H5V5h1a.5.5 0 01.5.5v2h1v1z"
+      ></path>
+    </svg>
+
+    <svg
+      v-else-if="icon === 'download'"
+      class="arpc-bubble-icon"
+      aria-hidden="true"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+    >
+      <path
+        :style="{'fill': iconColor || color}"
+        d="M16.293 9.293L17.707 10.707L12 16.414L6.29297 10.707L7.70697 9.293L11 12.586V2H13V12.586L16.293 9.293ZM18 20V18H20V20C20 21.102 19.104 22 18 22H6C4.896 22 4 21.102 4 20V18H6V20H18Z"
+      ></path>
+    </svg>
+  </div>
+  <div class="arpc-bubble-text" :style="{'color': textColor || '#fff'}">
+    {{message}}
+  </div>
+</div>
+
+  `,
+  methods: {
+    redirectToLink(url) {
+      window.open(url, "_blank");
+    },
+
+    checkVersions() {
+      if (this.versions && !this.versions.includes(AdvancedRpc.installedVersion)) {
+        return false;
+      } else if (this.versionsSmallerThan && AdvancedRpc.installedVersion >= this.versionsSmallerThan) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+
+  }
 });
