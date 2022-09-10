@@ -397,8 +397,8 @@ module.exports = class AdvancedRpcBackend {
     };
 
     const rpcUrlVars = {
-        appleMusicUrl: attributes.url.appleMusic,
-        ciderUrl: attributes.url.cider,
+        appleMusicUrl: `${attributes.url.appleMusic}?src=arpc`,
+        ciderUrl: `${attributes.url.cider}?src=arpc`,
       },
       keyVars = [
         "details",
@@ -497,7 +497,7 @@ module.exports = class AdvancedRpcBackend {
           );
         }
         if (activity.buttons[1]?.url?.includes(`{${key}}`)) {
-          activity.buttons[1].url = activity.buttons[0].url.replace(
+          activity.buttons[1].url = activity.buttons[1].url.replace(
             `{${key}}`,
             rpcUrlVars[key]
           );

@@ -2,6 +2,7 @@ class AdvancedRpcFrontend {
   PLUGIN_NAME = "AdvancedRPC";
   SETTINGS_KEY = "settings";
 
+  remoteData = null;
   installedVersion = "[VI]{version}[/VI]";
   latestVersion = undefined;
   changelog = undefined;
@@ -76,6 +77,14 @@ class AdvancedRpcFrontend {
       ).then((response) => response.text());
     } catch (e) {
       this.changelog = "Failed to fetch changelog";
+    }
+
+    if (init) {
+      try {
+        this.remoteData = await fetch(
+          "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json"
+        ).then((response) => response.json());
+      } catch (e) {}
     }
   }
 }
