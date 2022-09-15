@@ -31,6 +31,7 @@ module.exports = class AdvancedRpcBackend {
       smallImageText: "",
       instance: false,
     };
+    this.startedTime = null;
     this.updateDelay = null;
     this.updateDelayQueue = 0;
   }
@@ -178,6 +179,7 @@ module.exports = class AdvancedRpcBackend {
    */
   onPlaybackStateDidChange(attributes) {
     this._attributes = attributes;
+    this.startedTime = Date.now();
     this.setActivity(attributes);
   }
 
@@ -186,6 +188,16 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   onNowPlayingItemDidChange(attributes) {
+    this._attributes = attributes;
+    this.startedTime = Date.now();
+    this.setActivity(attributes);
+  }
+
+  /**
+   * Runs on playback time change
+   * @param attributes Music Attributes
+   */
+  playbackTimeDidChange(attributes) {
     this._attributes = attributes;
     this.setActivity(attributes);
   }
@@ -382,9 +394,8 @@ module.exports = class AdvancedRpcBackend {
   filterActivity(activity, attributes) {
     // Add timestamp
     if (this._settings.play.timestamp !== "disabled" && attributes.status) {
-      activity.startTimestamp =
-        Date.now() - (attributes.durationInMillis - attributes.remainingTime);
-      if (this._settings.play.timestamp === "remaining")
+      activity.startTimestamp = this.startedTime ?? Date.now();
+      if (this._settings.play.timestamp === "remaining" && !attributes.isLive)
         activity.endTimestamp = attributes.endTime;
     }
 
@@ -399,6 +410,7 @@ module.exports = class AdvancedRpcBackend {
     const rpcUrlVars = {
         appleMusicUrl: `${attributes.url.appleMusic}?src=arpc`,
         ciderUrl: `${attributes.url.cider}?src=arpc`,
+        songlinkUrl: `https://song.link/i/${attributes.songId}?src=arpc`,
       },
       keyVars = [
         "details",

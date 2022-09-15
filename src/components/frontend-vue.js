@@ -989,64 +989,64 @@ Vue.component("plugin.advancedrpc", {
 
 Vue.component("vue-variables-modal", {
   template: `
-    <div class="arpc-modal-layer" @click.self="$emit('close-variables')">
-      <div class="arpc-modal-window">
-        <div class="arpc-modal-header">
-          <div>Variables</div>
-          <vue-close-button
-            @close="$emit('close-variables')"
-          ></vue-close-button>
-        </div>
-        <div class="arpc-modal-content">
-          <h4>Text Variables</h4>
-          <div id="arpc-variables">
-            <div>{title}</div>
-            <div>{artist}</div>
-            <div>{album}</div>
-            <div>{composer}</div>
-            <div>{trackNumber}</div>
-          </div>
+  <div class="arpc-modal-layer" @click.self="$emit('close-variables')">
+  <div class="arpc-modal-window">
+    <div class="arpc-modal-header">
+      <div>Variables</div>
+      <vue-close-button @close="$emit('close-variables')"></vue-close-button>
+    </div>
+    <div class="arpc-modal-content">
+      <h4>Text Variables</h4>
+      <div id="arpc-variables">
+        <div>{title}</div>
+        <div>{artist}</div>
+        <div>{album}</div>
+        <div>{composer}</div>
+        <div>{trackNumber}</div>
+      </div>
 
-          <h4>Playback Variables</h4>
-          <div id="arpc-variables">
-            <div>{play.details}</div>
-            <div>{play.state}</div>
-            <div>{play.largeImageText}</div>
-            <div>{play.smallImageText}</div>
-            <div>{play.largeImageKey}</div>
-            <div>{play.smallImageKey}</div>
-            <div>{play.fallbackImage}</div>
-          </div>
+      <h4>Playback Variables</h4>
+      <div id="arpc-variables">
+        <div>{play.details}</div>
+        <div>{play.state}</div>
+        <div>{play.largeImageText}</div>
+        <div>{play.smallImageText}</div>
+        <div>{play.largeImageKey}</div>
+        <div>{play.smallImageKey}</div>
+        <div>{play.fallbackImage}</div>
+      </div>
 
-          <h4>Pause Variables</h4>
-          <div id="arpc-variables">
-            <div>{pause.details}</div>
-            <div>{pause.state}</div>
-            <div>{pause.largeImageText}</div>
-            <div>{pause.smallImageText}</div>
-            <div>{pause.largeImageKey}</div>
-            <div>{pause.smallImageKey}</div>
-            <div>{pause.fallbackImage}</div>
-          </div>
+      <h4>Pause Variables</h4>
+      <div id="arpc-variables">
+        <div>{pause.details}</div>
+        <div>{pause.state}</div>
+        <div>{pause.largeImageText}</div>
+        <div>{pause.smallImageText}</div>
+        <div>{pause.largeImageKey}</div>
+        <div>{pause.smallImageKey}</div>
+        <div>{pause.fallbackImage}</div>
+      </div>
 
-          <h4>Variables Style</h4>
-          <div id="arpc-variables">
-            <div>{variable^}</div>
-            for uppercase
-          </div>
-          <div id="arpc-variables">
-            <div>{variable*}</div>
-            for lowercase
-          </div>
+      <h4>Variables Style</h4>
+      <div id="arpc-variables">
+        <div>{variable^}</div>
+        for uppercase
+      </div>
+      <div id="arpc-variables">
+        <div>{variable*}</div>
+        for lowercase
+      </div>
 
-          <h4>URL Variables</h4>
-          <div id="arpc-variables">
-            <div>{appleMusicUrl}</div>
-            <div>{ciderUrl}</div>
-          </div>
-        </div>
+      <h4>URL Variables</h4>
+      <div id="arpc-variables">
+        <div>{appleMusicUrl}</div>
+        <div>{ciderUrl}</div>
+        <div>{songlinkUrl}</div>
       </div>
     </div>
+  </div>
+</div>
+
   `,
 });
 
