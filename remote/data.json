@@ -1,4 +1,12 @@
 {
-  "bubbles": [],
+  "bubbles": [
+    {
+      "enabled": true,
+      "message": "Support for the new live radio stations will be coming as soon as Cider resolves issues with song info not updating.",
+      "url": "https://github.com/ciderapp/Cider/issues/1436",
+      "color": "#fc6603",
+      "icon": "info"
+    }
+  ],
   "titleDecorations": {}
 }
