@@ -1,4 +1,4 @@
-/* Version: 1.3.1 - September 10, 2022 04:16:25 */
+/* Version: 1.3.2 - September 16, 2022 00:53:18 */
 'use strict';
 
 var require$$0$1 = require('fs');
@@ -87318,7 +87318,7 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.3.1";
+    this.version = "1.3.2";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
     this._prevSettings = {};
@@ -87337,6 +87337,7 @@ var src = class AdvancedRpcBackend {
       smallImageText: "",
       instance: false
     };
+    this.startedTime = null;
     this.updateDelay = null;
     this.updateDelayQueue = 0;
   }
@@ -87448,6 +87449,7 @@ var src = class AdvancedRpcBackend {
 
   onPlaybackStateDidChange(attributes) {
     this._attributes = attributes;
+    this.startedTime = Date.now();
     this.setActivity(attributes);
   }
   /**
@@ -87457,6 +87459,17 @@ var src = class AdvancedRpcBackend {
 
 
   onNowPlayingItemDidChange(attributes) {
+    this._attributes = attributes;
+    this.startedTime = Date.now();
+    this.setActivity(attributes);
+  }
+  /**
+   * Runs on playback time change
+   * @param attributes Music Attributes
+   */
+
+
+  playbackTimeDidChange(attributes) {
     this._attributes = attributes;
     this.setActivity(attributes);
   }
@@ -87608,8 +87621,8 @@ var src = class AdvancedRpcBackend {
   filterActivity(activity, attributes) {
     // Add timestamp
     if (this._settings.play.timestamp !== "disabled" && attributes.status) {
-      activity.startTimestamp = Date.now() - (attributes.durationInMillis - attributes.remainingTime);
-      if (this._settings.play.timestamp === "remaining") activity.endTimestamp = attributes.endTime;
+      activity.startTimestamp = this.startedTime ?? Date.now();
+      if (this._settings.play.timestamp === "remaining" && !attributes.isLive) activity.endTimestamp = attributes.endTime;
     }
 
     let rpcTextVars = {
@@ -87621,7 +87634,8 @@ var src = class AdvancedRpcBackend {
     };
     const rpcUrlVars = {
       appleMusicUrl: `${attributes.url.appleMusic}?src=arpc`,
-      ciderUrl: `${attributes.url.cider}?src=arpc`
+      ciderUrl: `${attributes.url.cider}?src=arpc`,
+      songlinkUrl: `https://song.link/i/${attributes.songId}?src=arpc`
     },
           keyVars = ["details", "state", "largeImageText", "smallImageText", "largeImageKey", "smallImageKey", "fallbackImage"]; // Create uppercase and lowercase variables
 
