@@ -15,6 +15,7 @@ module.exports = class AdvancedRpcBackend {
     this._settings = {};
     this._prevSettings = {};
     this._initSettings = {};
+    this._nextSettings = {};
     this.init = false;
 
     this._utils = env.utils;
@@ -93,7 +94,10 @@ module.exports = class AdvancedRpcBackend {
           this._initSettings = this._settings;
         else this._initSettings.applySettings = this._settings.applySettings;
 
-        if (settings.applySettings === "manually") {
+        if (
+          settings.applySettings === "manually" ||
+          settings.applySettings === "state"
+        ) {
           if (JSON.stringify(this._initSettings) === JSON.stringify(settings))
             this._utils
               .getWindow()
@@ -102,29 +106,17 @@ module.exports = class AdvancedRpcBackend {
             this._utils
               .getWindow()
               .webContents.send(`plugin.${this.name}.unappliedSettings`, true);
+
+          if (settings.applySettings === "state") {
+            this._prevSettings = this._settings;
+            this._nextSettings = settings;
+          }
         } else {
           this._prevSettings = this._settings;
           this._settings = settings;
 
-          if (settings.applySettings === "state") {
-            if (JSON.stringify(this._initSettings) === JSON.stringify(settings))
-              this._utils
-                .getWindow()
-                .webContents.send(
-                  `plugin.${this.name}.unappliedSettings`,
-                  false
-                );
-            else
-              this._utils
-                .getWindow()
-                .webContents.send(
-                  `plugin.${this.name}.unappliedSettings`,
-                  true
-                );
-          } else {
-            if (this._prevSettings.appId === this._settings.appId)
-              this.setActivity(this._attributes);
-          }
+          if (this._prevSettings.appId === this._settings.appId)
+            this.setActivity(this._attributes);
         }
 
         if (!this.init) {
@@ -178,6 +170,18 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes (attributes.status = current state)
    */
   onPlaybackStateDidChange(attributes) {
+    if (
+      Object.keys(this._nextSettings).length !== 0 &&
+      this._settings.applySettings === "state"
+    ) {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      this._settings = this._nextSettings;
+      this._nextSettings = {};
+      this._initSettings = {};
+    }
+
     this._attributes = attributes;
     this.startedTime = Date.now();
     this.setActivity(attributes);
@@ -188,6 +192,18 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   onNowPlayingItemDidChange(attributes) {
+    if (
+      Object.keys(this._nextSettings).length !== 0 &&
+      this._settings.applySettings === "state"
+    ) {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      this._settings = this._nextSettings;
+      this._nextSettings = {};
+      this._initSettings = {};
+    }
+
     this._attributes = attributes;
     this.startedTime = Date.now();
     this.setActivity(attributes);
@@ -244,7 +260,7 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   setActivity(attributes) {
-    if (this._settings.applySettings !== "manually") {
+    if (this._settings.applySettings === "immediately") {
       this._utils
         .getWindow()
         .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
