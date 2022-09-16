@@ -1,4 +1,4 @@
-/* Version: 1.3.2 - September 16, 2022 00:53:18 */
+/* Version: 1.3.3 - September 16, 2022 03:24:00 */
 'use strict';
 
 Vue.component("plugin.advancedrpc", {
@@ -837,7 +837,7 @@ Vue.component("plugin.advancedrpc", {
     installedVersion: AdvancedRpc.installedVersion,
     latestVersion: AdvancedRpc.latestVersion,
     unappliedSettings: AdvancedRpc.unappliedSettings,
-    versionInfo: "1.3.2 - September 16, 2022 00:53:18",
+    versionInfo: "1.3.3 - September 16, 2022 03:24:00",
     textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
     urlVariables: "{appleMusicUrl}, {ciderUrl}",
     variableStyles: "{variable^} for uppercase, {variable*} for lowercase",

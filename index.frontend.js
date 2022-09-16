@@ -1,11 +1,11 @@
-/* Version: 1.3.2 - September 16, 2022 00:53:18 */
+/* Version: 1.3.3 - September 16, 2022 03:24:00 */
 'use strict';
 
 class AdvancedRpcFrontend {
   PLUGIN_NAME = "AdvancedRPC";
   SETTINGS_KEY = "settings";
   remoteData = null;
-  installedVersion = "1.3.2";
+  installedVersion = "1.3.3";
   latestVersion = undefined;
   changelog = undefined;
   unappliedSettings = false;

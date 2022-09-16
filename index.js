@@ -1,4 +1,4 @@
-/* Version: 1.3.2 - September 16, 2022 00:53:18 */
+/* Version: 1.3.3 - September 16, 2022 03:24:00 */
 'use strict';
 
 var require$$0$1 = require('fs');
@@ -87318,11 +87318,12 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.3.2";
+    this.version = "1.3.3";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
     this._prevSettings = {};
     this._initSettings = {};
+    this._nextSettings = {};
     this.init = false;
     this._utils = env.utils;
     this._attributes = undefined;
@@ -87392,17 +87393,17 @@ var src = class AdvancedRpcBackend {
         this._settings.applySettings = settings.applySettings;
         if (Object.keys(this._initSettings).length === 0) this._initSettings = this._settings;else this._initSettings.applySettings = this._settings.applySettings;
 
-        if (settings.applySettings === "manually") {
+        if (settings.applySettings === "manually" || settings.applySettings === "state") {
           if (JSON.stringify(this._initSettings) === JSON.stringify(settings)) this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);else this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, true);
+
+          if (settings.applySettings === "state") {
+            this._prevSettings = this._settings;
+            this._nextSettings = settings;
+          }
         } else {
           this._prevSettings = this._settings;
           this._settings = settings;
-
-          if (settings.applySettings === "state") {
-            if (JSON.stringify(this._initSettings) === JSON.stringify(settings)) this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);else this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, true);
-          } else {
-            if (this._prevSettings.appId === this._settings.appId) this.setActivity(this._attributes);
-          }
+          if (this._prevSettings.appId === this._settings.appId) this.setActivity(this._attributes);
         }
 
         if (!this.init) {
@@ -87448,6 +87449,14 @@ var src = class AdvancedRpcBackend {
 
 
   onPlaybackStateDidChange(attributes) {
+    if (Object.keys(this._nextSettings).length !== 0 && this._settings.applySettings === "state") {
+      this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+
+      this._settings = this._nextSettings;
+      this._nextSettings = {};
+      this._initSettings = {};
+    }
+
     this._attributes = attributes;
     this.startedTime = Date.now();
     this.setActivity(attributes);
@@ -87459,6 +87468,14 @@ var src = class AdvancedRpcBackend {
 
 
   onNowPlayingItemDidChange(attributes) {
+    if (Object.keys(this._nextSettings).length !== 0 && this._settings.applySettings === "state") {
+      this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+
+      this._settings = this._nextSettings;
+      this._nextSettings = {};
+      this._initSettings = {};
+    }
+
     this._attributes = attributes;
     this.startedTime = Date.now();
     this.setActivity(attributes);
@@ -87513,7 +87530,7 @@ var src = class AdvancedRpcBackend {
 
 
   setActivity(attributes) {
-    if (this._settings.applySettings !== "manually") {
+    if (this._settings.applySettings === "immediately") {
       this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
 
       this._initSettings = {};
