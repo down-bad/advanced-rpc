@@ -8,5 +8,7 @@
       "icon": "info"
     }
   ],
-  "titleDecorations": {}
+  "titleDecorations": {
+    "rightImage": "https://i.imgur.com/HiIKziL.png"
+  }
 }
