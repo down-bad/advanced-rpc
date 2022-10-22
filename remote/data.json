@@ -1,10 +1,10 @@
 {
   "bubbles": [
     {
-      "enabled": false,
-      "message": "Support for the new live radio stations will be coming as soon as Cider resolves issues with song info not updating.",
-      "url": "https://github.com/ciderapp/Cider/issues/1436",
-      "color": "#fc6603",
+      "enabled": true,
+      "message": "AdvancedRPC 1.4.0 is coming soon! Click here for a sneak peek.",
+      "url": "https://i.imgur.com/IAJKSKY.png",
+      "color": "#DA70D6",
       "icon": "info"
     }
   ],
