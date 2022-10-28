@@ -1,7 +1,7 @@
 {
   "bubbles": [
     {
-      "enabled": true,
+      "enabled": false,
       "message": "AdvancedRPC 1.4.0 is coming soon! Click here for a sneak peek.",
       "url": "https://i.imgur.com/IAJKSKY.png",
       "color": "#DA70D6",
@@ -10,5 +10,13 @@
   ],
   "titleDecorations": {
     "rightImage": "https://i.imgur.com/vt0npur.gif"
+  },
+  "sidebar": {
+    "lower": [
+      {
+        "text": "Report an issue",
+        "url": "https://github.com/down-bad/advanced-rpc/issues/new"
+      }
+    ]
   }
 }
