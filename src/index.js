@@ -1,6 +1,7 @@
 const { AutoClient } = require("discord-auto-rpc");
 const { ipcMain } = require("electron");
 const { join } = require("path");
+const axios = require("axios");
 
 module.exports = class AdvancedRpcBackend {
   constructor(env) {
@@ -33,8 +34,12 @@ module.exports = class AdvancedRpcBackend {
       instance: false,
     };
     this.startedTime = null;
-    this.updateDelay = null;
-    this.updateDelayQueue = 0;
+    this.updateTime = 0;
+
+    this.coverImage = {
+      id: null,
+      url: null,
+    };
   }
 
   /*******************************************************************************************
@@ -46,30 +51,6 @@ module.exports = class AdvancedRpcBackend {
    */
   onReady(_win) {
     console.log(`[Plugin][${this.name}] Ready.`);
-
-    ipcMain.on(`plugin.${this.name}.reload`, () => {
-      console.log(`[Plugin][${this.name}][reload] Reloading ${this.name}.`);
-      this._client.clearActivity();
-      this._client.destroy();
-
-      this._client
-        .endlessLogin({
-          clientId: this._settings.appId,
-        })
-        .then(() => {
-          this.ready = true;
-          this._utils
-            .getWindow()
-            .webContents.send("rpcReloaded", this._client.user);
-          if (this._activityCache) {
-            console.info(
-              `[Plugin][${this.name}][reload] Restoring activity cache.`
-            );
-            this._client.setActivity(this._activityCache);
-          }
-        })
-        .catch((e) => console.error(`[Plugin][${this.name}][reload] ${e}`));
-    });
   }
 
   async onRendererReady(_win) {
@@ -152,6 +133,31 @@ module.exports = class AdvancedRpcBackend {
           this.setActivity(this._attributes);
         }
       );
+
+      ipcMain.on("discordrpc:updateImage", async (_event, artworkUrl) => {
+        if (this._utils.getStoreValue("connectivity.discord_rpc.enabled"))
+          return;
+
+        const res = await axios.post(
+          "https://api.cider.sh/v1/images",
+          { url: artworkUrl },
+          {
+            headers: {
+              "User-Agent": this._utils.getWindow().webContents.getUserAgent(),
+              url: artworkUrl,
+            },
+          }
+        );
+
+        this.coverImage.id = this._attributes.songId;
+        this.coverImage.url = `https://images.weserv.nl/?url=${
+          res.data.imageUrl
+        }&w=${this._settings.imageSize ?? 1024}&h=${
+          this._settings.imageSize ?? 1024
+        }&output=jpg&fit=cover`;
+
+        this.setActivity(this._attributes);
+      });
     } catch {}
 
     this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
@@ -182,7 +188,6 @@ module.exports = class AdvancedRpcBackend {
       this._initSettings = {};
     }
 
-    this._attributes = attributes;
     this.startedTime = Date.now();
     this.setActivity(attributes);
   }
@@ -204,7 +209,6 @@ module.exports = class AdvancedRpcBackend {
       this._initSettings = {};
     }
 
-    this._attributes = attributes;
     this.startedTime = Date.now();
     this.setActivity(attributes);
   }
@@ -214,13 +218,14 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   playbackTimeDidChange(attributes) {
-    this._attributes = attributes;
-    this.setActivity(attributes);
+    if (
+      (this.updateTime + 5000 < Date.now() &&
+        attributes.endTime - 5000 > Date.now()) ||
+      attributes.kind === "radioStation"
+    ) {
+      this.setActivity(attributes);
+    }
   }
-
-  /*******************************************************************************************
-   * Private Methods
-   * ****************************************************************************************/
 
   /**
    * Connect to Discord RPC
@@ -260,6 +265,8 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   setActivity(attributes) {
+    this._attributes = attributes;
+
     if (this._settings.applySettings === "immediately") {
       this._utils
         .getWindow()
@@ -270,7 +277,6 @@ module.exports = class AdvancedRpcBackend {
     if (!this._client || !attributes) return;
 
     if (
-      this._utils.getStoreValue("general.discordrpc.enabled") ||
       this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
       !this._settings.enabled ||
       (this._settings.respectPrivateSession &&
@@ -281,107 +287,190 @@ module.exports = class AdvancedRpcBackend {
       return;
     }
 
-    if (this._settings.presenceUpdateDelay > 0) {
-      if (Date.now() > this.updateDelay) {
-        this.updateDelayQueue = 0;
-        this.updateDelay =
-          Date.now() + parseInt(this._settings.presenceUpdateDelay);
-      } else {
-        if (this.updateDelayQueue > 4) return;
-        return setTimeout(() => {
-          this.updateDelayQueue++;
-          this.setActivity(this._attributes);
-        }, this.updateDelay - Date.now());
-      }
-    }
-
     let activity = {
       instance: false,
     };
 
-    const settings = attributes.status
-      ? this._settings.play
-      : this._settings.pause;
+    let settings;
+    if (
+      attributes.kind === "radioStation" &&
+      !this._settings.radio.usePlayConfig
+    ) {
+      settings = this._settings.radio;
+    } else if (
+      attributes.kind === "podcast-episodes" &&
+      attributes.status &&
+      !this._settings.podcasts.play.usePlayConfig
+    ) {
+      settings = this._settings.podcasts.play;
+    } else if (
+      attributes.kind === "podcast-episodes" &&
+      !attributes.status &&
+      !this._settings.podcasts.pause.usePauseConfig
+    ) {
+      settings = this._settings.podcasts.pause;
+    } else if (
+      (attributes.kind === "musicVideo" ||
+        attributes.kind === "uploadedVideo") &&
+      attributes.status &&
+      !this._settings.videos.play.usePlayConfig
+    ) {
+      settings = this._settings.videos.play;
+    } else if (
+      (attributes.kind === "musicVideo" ||
+        attributes.kind === "uploadedVideo") &&
+      !attributes.status &&
+      !this._settings.videos.pause.usePauseConfig
+    ) {
+      settings = this._settings.videos.pause;
+    } else {
+      settings = attributes.status ? this._settings.play : this._settings.pause;
+    }
+
+    const fallbackImage = attributes.status
+      ? this._settings.play.fallbackImage
+      : this._settings.pause.fallbackImage;
 
     activity.details = settings.details;
     activity.state = settings.state;
     activity.largeImageText = settings.largeImageText;
 
+    // Set image size
     if (this._settings.imageSize < 1) this._settings.imageSize = 1024;
 
+    // Set large image
     if (settings.largeImage === "cover") {
-      activity.largeImageKey =
-        attributes.artwork?.url
-          ?.replace("{w}", this._settings.imageSize ?? 1024)
-          .replace("{h}", this._settings.imageSize ?? 1024) ??
-        settings.fallbackImage;
+      if (this.coverImage.id === attributes.songId && this.coverImage.url) {
+        activity.largeImageKey = this.coverImage.url;
+      } else {
+        activity.largeImageKey =
+          attributes.artwork?.url
+            ?.replace("{w}", this._settings.imageSize ?? 1024)
+            .replace("{h}", this._settings.imageSize ?? 1024) ?? fallbackImage;
+      }
 
       if (
-        activity.largeImageKey !== settings.fallbackImage &&
+        activity.largeImageKey !== fallbackImage &&
         !this.isValidUrl(activity.largeImageKey)
       )
-        activity.largeImageKey = settings.fallbackImage;
+        activity.largeImageKey = fallbackImage;
     } else if (settings.largeImage === "custom") {
       activity.largeImageKey = settings.largeImageKey;
     }
 
+    // Set small image
     activity.smallImageText = settings.smallImageText;
     if (settings.smallImage === "cover") {
-      activity.smallImageKey =
-        attributes.artwork?.url
-          ?.replace("{w}", this._settings.imageSize ?? 1024)
-          .replace("{h}", this._settings.imageSize ?? 1024) ??
-        settings.fallbackImage;
+      if (this.coverImage.id === attributes.songId && this.coverImage.url) {
+        activity.smallImageKey = this.coverImage.url;
+      } else {
+        activity.smallImageKey =
+          attributes.artwork?.url
+            ?.replace("{w}", this._settings.imageSize ?? 1024)
+            .replace("{h}", this._settings.imageSize ?? 1024) ?? fallbackImage;
+      }
 
       if (
-        activity.smallImageKey !== settings.fallbackImage &&
+        activity.smallImageKey !== fallbackImage &&
         !this.isValidUrl(activity.smallImageKey)
       )
-        activity.smallImageKey = settings.fallbackImage;
+        activity.smallImageKey = fallbackImage;
     } else if (settings.smallImage === "custom") {
       activity.smallImageKey = settings.smallImageKey;
     }
 
+    // Buttons
     activity.buttons = [];
 
-    if (
-      !attributes.status &&
-      this._settings.play.enabled &&
-      this._settings.play.buttons &&
-      this._settings.pause.enabled &&
-      this._settings.pause.buttons &&
-      this._settings.pause.usePlayButtons
+    if (attributes.kind === "podcast-episodes") {
+      if (
+        this._settings.podcasts.pause.enabled &&
+        !this._settings.podcasts.pause.usePauseConfig &&
+        this._settings.podcasts.pause.buttons &&
+        this._settings.podcasts.pause.usePlayButtons &&
+        !attributes.status
+      ) {
+        this.setButtons(
+          this._settings.podcasts.play.button1,
+          this._settings.podcasts.play.button2,
+          activity
+        );
+      } else if (
+        this._settings.podcasts.pause.enabled &&
+        this._settings.podcasts.pause.usePauseConfig &&
+        this._settings.pause.buttons &&
+        this._settings.pause.usePlayButtons &&
+        !attributes.status
+      ) {
+        this.setButtons(
+          this._settings.play.button1,
+          this._settings.play.button2,
+          activity
+        );
+      } else if (settings.buttons) {
+        this.setButtons(settings.button1, settings.button2, activity);
+      }
+    } else if (
+      attributes.kind === "musicVideo" ||
+      attributes.kind === "uploadedVideo"
     ) {
       if (
-        this._settings.play.button1.label &&
-        this._settings.play.button1.url
+        this._settings.videos.pause.enabled &&
+        !this._settings.videos.pause.usePauseConfig &&
+        this._settings.videos.pause.buttons &&
+        this._settings.videos.pause.usePlayButtons &&
+        !attributes.status
       ) {
-        activity.buttons.push({
-          label: this._settings.play.button1.label,
-          url: this._settings.play.button1.url,
-        });
-      }
-      if (
-        this._settings.play.button2.label &&
-        this._settings.play.button2.url
+        this.setButtons(
+          this._settings.videos.play.button1,
+          this._settings.videos.play.button2,
+          activity
+        );
+      } else if (
+        this._settings.videos.pause.enabled &&
+        this._settings.videos.pause.usePauseConfig &&
+        this._settings.pause.buttons &&
+        this._settings.pause.usePlayButtons &&
+        !attributes.status
       ) {
-        activity.buttons.push({
-          label: this._settings.play.button2.label,
-          url: this._settings.play.button2.url,
-        });
+        this.setButtons(
+          this._settings.play.button1,
+          this._settings.play.button2,
+          activity
+        );
+      } else if (settings.buttons) {
+        this.setButtons(settings.button1, settings.button2, activity);
       }
+    } else if (
+      (this._settings.pause.enabled &&
+        this._settings.pause.buttons &&
+        this._settings.pause.usePlayButtons &&
+        !attributes.status) ||
+      (this._settings.radio.enabled &&
+        !this._settings.radio.usePlayConfig &&
+        this._settings.radio.buttons &&
+        this._settings.radio.usePlayButtons &&
+        attributes.kind === "radioStation")
+    ) {
+      this.setButtons(
+        this._settings.play.button1,
+        this._settings.play.button2,
+        activity
+      );
     } else if (settings.buttons) {
-      if (settings.button1.label && settings.button1.url) {
-        activity.buttons.push({
-          label: settings.button1.label,
-          url: settings.button1.url,
-        });
-      }
-      if (settings.button2.label && settings.button2.url) {
-        activity.buttons.push({
-          label: settings.button2.label,
-          url: settings.button2.url,
-        });
+      this.setButtons(settings.button1, settings.button2, activity);
+    }
+
+    // Set timestamps
+    if (attributes.status) {
+      if (settings.timestamp !== "disabled") {
+        activity.startTimestamp = this.startedTime ?? Date.now();
+
+        if (
+          settings.timestamp === "remaining" &&
+          attributes.kind !== "radioStation"
+        )
+          activity.endTimestamp = attributes.endTime;
       }
     }
 
@@ -394,49 +483,82 @@ module.exports = class AdvancedRpcBackend {
     }
 
     if (
-      (attributes.status && !this._settings.play.enabled) ||
-      (!attributes.status && !this._settings.pause.enabled)
+      (attributes.status && !settings.enabled) ||
+      (!attributes.status && !settings.enabled)
     ) {
       this._client.clearActivity();
     } else if (activity && this._activityCache !== activity) {
       this._client.setActivity(activity);
     }
     this._activityCache = activity;
+    this.updateTime = Date.now();
   }
 
   /**
    * Filter the Discord activity object
    */
   filterActivity(activity, attributes) {
-    // Add timestamp
-    if (this._settings.play.timestamp !== "disabled" && attributes.status) {
-      activity.startTimestamp = this.startedTime ?? Date.now();
-      if (this._settings.play.timestamp === "remaining" && !attributes.isLive)
-        activity.endTimestamp = attributes.endTime;
-    }
-
     let rpcTextVars = {
-      artist: attributes.artistName,
-      composer: attributes.composerName,
-      title: attributes.name,
-      album: attributes.albumName,
-      trackNumber: attributes.trackNumber,
-    };
-
-    const rpcUrlVars = {
+        artist: attributes.artistName ?? "",
+        composer: attributes.composerName ?? "",
+        title: attributes.name ?? "",
+        album: attributes.albumName ?? "",
+        trackNumber: attributes.trackNumber ?? "",
+        songId: attributes.songId ?? "",
+      },
+      rpcUrlVars = {
         appleMusicUrl: `${attributes.url.appleMusic}?src=arpc`,
         ciderUrl: `${attributes.url.cider}?src=arpc`,
-        songlinkUrl: `https://song.link/i/${attributes.songId}?src=arpc`,
-      },
-      keyVars = [
-        "details",
-        "state",
-        "largeImageText",
-        "smallImageText",
-        "largeImageKey",
-        "smallImageKey",
-        "fallbackImage",
-      ];
+        songlinkUrl: `https://song.link/i/${rpcTextVars["songId"]}?src=arpc`,
+        spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(
+          rpcTextVars["artist"] + " - " + rpcTextVars["title"]
+        )}?src=arpc`,
+      };
+
+    if (attributes.kind === "radioStation") {
+      rpcTextVars["radioName"] = attributes.editorialNotes?.name ?? "";
+      rpcTextVars["radioTagline"] = attributes.editorialNotes?.tagline ?? "";
+      rpcUrlVars[
+        "radioUrl"
+      ] = `https://music.apple.com/station/${rpcTextVars["songId"]}?src=arpc`;
+    }
+
+    if (attributes.kind === "podcast-episodes") {
+      rpcTextVars["episodeNumber"] = attributes.episodeNumber ?? "";
+      rpcUrlVars["assetUrl"] = attributes.assetUrl ?? "";
+    }
+
+    if (attributes.kind === "musicVideo")
+      rpcUrlVars["appleMusicUrl"] = rpcUrlVars["appleMusicUrl"].replace(
+        "song",
+        "music-video"
+      );
+    else if (attributes.kind === "uploadedVideo")
+      rpcUrlVars["appleMusicUrl"] = rpcUrlVars["appleMusicUrl"].replace(
+        "song",
+        "post"
+      );
+
+    if (this._settings.removeInvalidButtons) {
+      if (attributes.songId.startsWith("i.") || attributes.songId === "-1") {
+        rpcUrlVars["appleMusicUrl"] = "";
+        rpcUrlVars["ciderUrl"] = "";
+        rpcUrlVars["songlinkUrl"] = "";
+      }
+
+      if (attributes.kind === "podcast-episodes") {
+        rpcUrlVars["ciderUrl"] = "";
+        rpcUrlVars["songlinkUrl"] = "";
+      }
+
+      if (
+        attributes.kind === "musicVideo" ||
+        attributes.kind === "uploadedVideo"
+      ) {
+        rpcUrlVars["ciderUrl"] = "";
+        rpcUrlVars["songlinkUrl"] = "";
+      }
+    }
 
     // Create uppercase and lowercase variables
     for (const [key, value] of Object.entries(rpcTextVars)) {
@@ -445,36 +567,6 @@ module.exports = class AdvancedRpcBackend {
         rpcTextVars[`${key}*`] = value.toLowerCase();
       }
     }
-
-    // Create play variables
-    keyVars.forEach((key) => {
-      let value = this._settings.play[key];
-
-      Object.keys(rpcTextVars).forEach((rpcTextVar) => {
-        if (typeof value === "string" && value.includes(`{${rpcTextVar}}`)) {
-          value = value.replace(`{${rpcTextVar}}`, rpcTextVars[rpcTextVar]);
-        }
-      });
-
-      rpcTextVars[`play.${key}`] = value;
-      rpcTextVars[`play.${key}^`] = value?.toUpperCase();
-      rpcTextVars[`play.${key}*`] = value?.toLowerCase();
-    });
-
-    // Create pause variables
-    keyVars.forEach((key) => {
-      let value = this._settings.pause[key];
-
-      Object.keys(rpcTextVars).forEach((rpcTextVar) => {
-        if (typeof value === "string" && value.includes(`{${rpcTextVar}}`)) {
-          value = value.replace(`{${rpcTextVar}}`, rpcTextVars[rpcTextVar]);
-        }
-      });
-
-      rpcTextVars[`pause.${key}`] = value;
-      rpcTextVars[`pause.${key}^`] = value?.toUpperCase();
-      rpcTextVars[`pause.${key}*`] = value?.toLowerCase();
-    });
 
     // Apply text variables
     Object.keys(rpcTextVars).forEach((key) => {
@@ -506,10 +598,22 @@ module.exports = class AdvancedRpcBackend {
             rpcTextVars[key]
           );
         }
+        if (activity.buttons[0]?.url?.includes(`{${key}}`)) {
+          activity.buttons[0].url = activity.buttons[0].url.replace(
+            `{${key}}`,
+            encodeURIComponent(rpcTextVars[key])
+          );
+        }
         if (activity.buttons[1]?.label?.includes(`{${key}}`)) {
           activity.buttons[1].label = activity.buttons[1].label.replace(
             `{${key}}`,
             rpcTextVars[key]
+          );
+        }
+        if (activity.buttons[1]?.url?.includes(`{${key}}`)) {
+          activity.buttons[1].url = activity.buttons[1].url.replace(
+            `{${key}}`,
+            encodeURIComponent(rpcTextVars[key])
           );
         }
       }
@@ -642,5 +746,20 @@ module.exports = class AdvancedRpcBackend {
       return false;
     }
     return url.protocol === "http:" || url.protocol === "https:";
+  }
+
+  setButtons(button1, button2, activity) {
+    if (button1.label && button1.url) {
+      activity.buttons.push({
+        label: button1.label,
+        url: button1.url,
+      });
+    }
+    if (button2.label && button2.url) {
+      activity.buttons.push({
+        label: button2.label,
+        url: button2.url,
+      });
+    }
   }
 };

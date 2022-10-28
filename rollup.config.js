@@ -21,6 +21,7 @@ export default {
   output: {
     dir: OUTPUT_DIR,
     format: "cjs",
+    exports: "auto",
   },
   external: ["path", "fs", "electron"],
   plugins: [
@@ -34,6 +35,7 @@ export default {
         { src: "package.json", dest: OUTPUT_DIR },
         { src: "README.md", dest: OUTPUT_DIR },
         { src: "src/advancedrpc.less", dest: OUTPUT_DIR },
+        { src: "src/fonts", dest: OUTPUT_DIR },
       ],
     }),
     json(),

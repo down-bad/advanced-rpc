@@ -1,24 +1,37 @@
-// https://gist.github.com/prashanthca/f76e1d3d41673389b790
 @font-face {
   font-family: "Whitney";
   font-style: normal;
-  font-weight: bold;
-  src: url(https://onedrive.live.com/download?resid=F87CD694B48033C9!114&authkey=!ADeQuq8LqQCrD3I&ithint=file%2cwoff)
-    format("woff");
+  font-weight: 300;
+  src: url("./fonts/whitney-300.woff2") format("woff2"),
+    url("./fonts/whitney-300.woff") format("woff");
 }
 @font-face {
   font-family: "Whitney";
   font-style: normal;
-  font-weight: normal;
-  src: url(https://onedrive.live.com/download?resid=F87CD694B48033C9!109&authkey=!AOFbepGKctmbyqs&ithint=file%2cwoff)
-    format("woff");
+  font-weight: 400;
+  src: url("./fonts/whitney-400.woff2") format("woff2"),
+    url("./fonts/whitney-400.woff") format("woff");
 }
 @font-face {
   font-family: "Whitney";
-  font-style: italic;
-  font-weight: normal;
-  src: url(https://onedrive.live.com/download?resid=F87CD694B48033C9!110&authkey=!AFIZ94cL6rDomi0&ithint=file%2cwoff)
-    format("woff");
+  font-style: normal;
+  font-weight: 500;
+  src: url("./fonts/whitney-500.woff2") format("woff2"),
+    url("./fonts/whitney-500.woff") format("woff");
+}
+@font-face {
+  font-family: "Whitney";
+  font-style: normal;
+  font-weight: 600;
+  src: url("./fonts/whitney-600.woff2") format("woff2"),
+    url("./fonts/whitney-600.woff") format("woff");
+}
+@font-face {
+  font-family: "Whitney";
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/whitney-700.woff2") format("woff2"),
+    url("./fonts/whitney-700.woff") format("woff");
 }
 
 .advancedrpc {
@@ -42,6 +55,7 @@
     height: 24px;
     border-radius: 14px;
     background: #72767d;
+    display: block;
   }
 
   input[type="checkbox"][switch]:active {
@@ -104,8 +118,12 @@
   zoom: 1;
   text-rendering: optimizeLegibility;
 
-  *:focus-visible {
-    outline: initial;
+  * {
+    transition: opacity 0.2s ease-in-out;
+
+    :focus-visible {
+      outline: initial;
+    }
   }
 
   h1,
@@ -118,17 +136,21 @@
     font-size: 35px;
   }
 
-  h2 {
-    margin-top: 50px;
-    margin-bottom: 5px;
+  h3 {
+    margin: 0;
+    margin-bottom: 10px;
+    margin-top: 40px;
+    font-size: 20px;
   }
 }
 
 .arpc-settings {
   margin-top: var(--chromeHeight1);
-  margin-bottom: var(--chromeHeight2);
+  margin-bottom: calc(var(--chromeHeight2) + 40px);
   padding: 32px;
   padding-bottom: 20px;
+  padding-left: 0;
+  min-height: 100vh;
 
   footer {
     display: flex;
@@ -137,8 +159,108 @@
     color: #a3a6aa;
     font-size: 12px;
     font-weight: 400;
-    margin-top: 20px;
+    margin-top: 80px;
   }
+}
+
+.arpc-sidebar {
+  height: calc(100% - var(--chromeHeight2));
+  width: 220px;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  background-color: #2f3136;
+  overflow-x: hidden;
+  padding-top: calc(var(--chromeHeight1) + 15px);
+  padding-left: 4px;
+  padding-right: 5px;
+  padding-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  .arpc-option {
+    margin-left: 5px;
+    padding-bottom: 30px;
+    padding-top: 20px;
+  }
+
+  .arpc-option-segment.arpc-option-segment_auto {
+    width: 60px;
+  }
+
+  .arpc-sidebar-item {
+    color: #b9bbbe;
+    padding: 6px 10px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+    position: relative;
+    font-size: 16px;
+    line-height: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+
+  .arpc-sidebar-item:hover {
+    background-color: #3c3f45;
+    color: #dcddde;
+  }
+
+  .arpc-sidebar-item:active {
+    background-color: #3f4248;
+    color: #fff;
+  }
+
+  .arpc-sidebar-selected {
+    background-color: #42464d;
+    color: #fff;
+    cursor: default;
+  }
+
+  .arpc-sidebar-selected:hover {
+    background-color: #3c3f45;
+    color: #fff;
+  }
+
+  .arpc-sidebar-selected:active {
+    background-color: #3f4248;
+    color: #fff;
+  }
+
+  .arpc-sidebar-blue {
+    background-color: #5865f2;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+
+    path {
+      background-color: currentColor;
+    }
+  }
+
+  .arpc-sidebar-blue:hover {
+    background-color: #4752c4;
+    color: #fff;
+  }
+
+  .arpc-sidebar-blue:active {
+    background-color: #3c45a5;
+    color: #fff;
+  }
+
+  footer {
+    margin-left: 5px;
+    margin-top: 10px;
+    opacity: 15%;
+  }
+}
+
+.arpc-content {
+  margin-left: 252px;
 }
 
 .arpc-unapplied-settings-alert {
@@ -155,6 +277,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 30px;
+  margin-left: 220px;
   position: relative;
   top: -100%;
 
@@ -174,19 +297,18 @@
 .arpc-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-
-  .arpc-header-left {
-    display: flex;
-    align-items: center;
-  }
+  align-items: flex-end;
+  margin-bottom: 20px;
 
   img {
     margin-right: 5px;
   }
 
   h1 {
-    margin-right: 5px;
+    margin-left: 5px;
+    margin-top: 0;
+    margin-bottom: 0;
+    font-size: 24px;
   }
 }
 
@@ -231,6 +353,25 @@
     font-size: 14px;
     line-height: 20px;
     font-weight: 400;
+
+    b {
+      font-weight: 600;
+    }
+  }
+}
+
+.arpc-option-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 50px;
+  margin-bottom: 10px;
+  padding-top: 15px;
+  padding-bottom: 15px;
+
+  h2,
+  h3 {
+    margin: 0;
   }
 }
 
@@ -403,13 +544,12 @@
     display: flex;
     justify-content: space-between;
     flex-flow: column;
-    max-height: 750px;
+    max-height: 90%;
     width: 490px;
     position: relative;
     font-size: 13px;
     word-wrap: break-word;
     margin: 0 auto;
-
     background-color: #36393f;
 
     .arpc-modal-header {
@@ -467,7 +607,7 @@
 
     .arpc-modal-footer {
       position: relative;
-      padding: 16px;
+      padding: 13px;
       border-radius: 0 0 5px 5px;
       background-color: #2f3136;
       display: flex;
@@ -491,6 +631,7 @@
         display: flex;
         align-items: center;
         user-select: none;
+        font-weight: 700;
       }
 
       .arpc-changelog-divider:after {
@@ -521,6 +662,15 @@
   opacity: 1;
 }
 
+.arpc-expand-button {
+  display: block;
+  transition: transform 0.2s ease-in-out;
+}
+
+.arpc-expandable {
+  cursor: pointer;
+}
+
 // Top Bar Slide
 
 .arpc-slide-enter-active {
@@ -542,17 +692,13 @@
 
 // Settings animations & transitions
 
-.arpc-opacity-transition {
-  transition: opacity 0.2s ease-in-out;
-}
-
 .arpc-settings-slide-enter-active {
   animation: settings-slide-open 0.3s;
   transition: 0.3s;
 }
 .arpc-settings-slide-leave-active {
-  animation: settings-slide-close 0.3s;
-  transition: 0.3s;
+  animation: settings-slide-close 0.2s;
+  transition: 0.2s;
 }
 
 @keyframes settings-slide-open {
@@ -583,7 +729,7 @@
 
 .arpc-fade-enter-active,
 .arpc-fade-leave-active {
-  transition: opacity 0.35s ease;
+  transition: opacity 0.4s ease;
 }
 
 .arpc-fade-enter,
@@ -593,24 +739,21 @@
 
 // Modal animation
 
-.arpc-modal-enter-active,
+.arpc-modal-enter-active {
+  transition: opacity 0.175s ease, transform 0.175s ease;
+}
+
 .arpc-modal-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.1s ease, transform 0.1s ease;
 }
 
 .arpc-modal-enter-active {
-  animation: modal-enter 0.2s;
+  animation: modal-enter 0.175s;
 }
 
 .arpc-modal-leave-active {
-  animation: modal-leave 0.2s;
+  animation: modal-leave 0.1s;
 }
-
-// .arpc-modal-enter,
-// .arpc-modal-leave-to {
-//   opacity: 0;
-//   transform: scale(0.8);
-// }
 
 @keyframes modal-enter {
   0% {
@@ -618,7 +761,7 @@
     transform: scale(0.7);
   }
   80% {
-    transform: scale(1.01);
+    transform: scale(1.013);
   }
   100% {
     opacity: 1;
