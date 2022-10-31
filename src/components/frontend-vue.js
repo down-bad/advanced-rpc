@@ -91,7 +91,7 @@ Vue.component("plugin.advancedrpc", {
             Settings
           </div>
           <div
-            v-for="item in remoteData.sidebar?.upper"
+            v-for="item in remoteData?.sidebar?.upper"
             class="arpc-sidebar-item"
             @click="openLink(item.url)"
           >
@@ -100,7 +100,7 @@ Vue.component("plugin.advancedrpc", {
         </div>
         <div>
           <div
-            v-for="item in remoteData.sidebar?.lower"
+            v-for="item in remoteData?.sidebar?.lower"
             class="arpc-sidebar-item"
             @click="openLink(item.url)"
           >
@@ -155,7 +155,7 @@ Vue.component("plugin.advancedrpc", {
         ></arpc-bubble>
 
         <arpc-bubble
-          v-for="bubble in remoteData.bubbles"
+          v-for="bubble in remoteData?.bubbles"
           v-if="bubble?.enabled"
           v-bind="bubble"
         ></arpc-bubble>
