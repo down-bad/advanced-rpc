@@ -2520,6 +2520,7 @@ Vue.component("plugin.advancedrpc", {
     },
     changeSidebarItem(item) {
       this.frontend.sidebar = item;
+      document.querySelector(".arpc-page").scrollIntoView();
     },
     openLink(url) {
       window.open(url, "_blank");
