@@ -135,7 +135,10 @@ module.exports = class AdvancedRpcBackend {
       );
 
       ipcMain.on("discordrpc:updateImage", async (_event, artworkUrl) => {
-        if (this._utils.getStoreValue("connectivity.discord_rpc.enabled"))
+        if (
+          this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
+          !this._attributes.songId.startsWith("i.")
+        )
           return;
 
         const res = await axios.post(
