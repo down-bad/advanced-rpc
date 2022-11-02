@@ -1,4 +1,4 @@
-/* Version: 1.4.0 - October 29, 2022 00:19:26 */
+/* Version: 1.4.1 - November 3, 2022 01:32:49 */
 'use strict';
 
 class AdvancedRpcFrontend {
@@ -6,7 +6,7 @@ class AdvancedRpcFrontend {
   SETTINGS_KEY = "settings";
   FRONTEND_KEY = "frontend";
   remoteData = null;
-  installedVersion = "1.4.0";
+  installedVersion = "1.4.1";
   latestVersion = undefined;
   changelog = undefined;
   unappliedSettings = false;

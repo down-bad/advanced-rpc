@@ -1,4 +1,4 @@
-/* Version: 1.4.0 - October 29, 2022 00:19:26 */
+/* Version: 1.4.1 - November 3, 2022 01:32:49 */
 'use strict';
 
 Vue.component("plugin.advancedrpc", {
@@ -94,7 +94,7 @@ Vue.component("plugin.advancedrpc", {
             Settings
           </div>
           <div
-            v-for="item in remoteData.sidebar?.upper"
+            v-for="item in remoteData?.sidebar?.upper"
             class="arpc-sidebar-item"
             @click="openLink(item.url)"
           >
@@ -103,7 +103,7 @@ Vue.component("plugin.advancedrpc", {
         </div>
         <div>
           <div
-            v-for="item in remoteData.sidebar?.lower"
+            v-for="item in remoteData?.sidebar?.lower"
             class="arpc-sidebar-item"
             @click="openLink(item.url)"
           >
@@ -158,7 +158,7 @@ Vue.component("plugin.advancedrpc", {
         ></arpc-bubble>
 
         <arpc-bubble
-          v-for="bubble in remoteData.bubbles"
+          v-for="bubble in remoteData?.bubbles"
           v-if="bubble?.enabled"
           v-bind="bubble"
         ></arpc-bubble>
@@ -2438,7 +2438,7 @@ Vue.component("plugin.advancedrpc", {
     installedVersion: AdvancedRpc.installedVersion,
     latestVersion: AdvancedRpc.latestVersion,
     unappliedSettings: AdvancedRpc.unappliedSettings,
-    versionInfo: "1.4.0 - October 29, 2022 00:19:26",
+    versionInfo: "1.4.1 - November 3, 2022 01:32:49",
     textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
     urlVariables: "{appleMusicUrl}, {ciderUrl}",
     variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
@@ -2500,6 +2500,7 @@ Vue.component("plugin.advancedrpc", {
     },
     changeSidebarItem(item) {
       this.frontend.sidebar = item;
+      document.querySelector(".arpc-page").scrollIntoView();
     },
     openLink(url) {
       window.open(url, "_blank");

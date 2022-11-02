@@ -1,4 +1,4 @@
-/* Version: 1.4.0 - October 29, 2022 00:19:26 */
+/* Version: 1.4.1 - November 3, 2022 01:32:49 */
 'use strict';
 
 var require$$0$1 = require('fs');
@@ -102920,7 +102920,7 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.4.0";
+    this.version = "1.4.1";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
     this._prevSettings = {};
@@ -103004,7 +103004,7 @@ var src = class AdvancedRpcBackend {
         this.setActivity(this._attributes);
       });
       ipcMain.on("discordrpc:updateImage", async (_event, artworkUrl) => {
-        if (this._utils.getStoreValue("connectivity.discord_rpc.enabled")) return;
+        if (this._utils.getStoreValue("connectivity.discord_rpc.enabled") || !this._attributes.songId.startsWith("i.")) return;
         const res = await axios.post("https://api.cider.sh/v1/images", {
           url: artworkUrl
         }, {
