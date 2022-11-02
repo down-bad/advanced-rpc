@@ -1,5 +1,0 @@
-{
-  "1.2.0": "Added advanced settings, improved UI & fixed bugs. This is a placeholder changelog.",
-  "1.2.1": "Ability to convert variables to uppercase and lowercase<br />Tweaked some option descriptions and removed a reference of an unreleased setting",
-  "1.3.0": "- Each text field is now a variable that can be used in other fields<br />- Available variables are now listed in a modal instead of clutering every option<br />- Notify when you have unapplied changes and ability to revert them<br />- Changelog and updating changes including a new changelog modal<br />- Fix presence showing \"title-not-found\" when no song is playing<br />- Fix presence freezing when title or author length is 1 character<br />- Rearranged some options<br />- Many UI improvements and tweaks including animations and fixes when using certain themes<br />- Back-end and code improvements<br />- Removed \"Reload AdvancedRPC\" option<br />- Drop support for older versions of Cider"
-}
