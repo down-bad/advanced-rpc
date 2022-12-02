@@ -16,6 +16,9 @@
       }
     ]
   },
+  "titleDecorations": {
+    "rightImage": "https://cdn.betterttv.net/emote/5fb184cc4dfba164402a0590/3x"
+  },
   "animatedArtworks": true,
   "icloudArtworks": false
 }
