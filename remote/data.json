@@ -11,6 +11,10 @@
   "sidebar": {
     "lower": [
       {
+        "text": "Request animated artwork",
+        "url": "https://docs.google.com/forms/d/e/1FAIpQLSdW0VKj-MdvMSlV59jR-Ti2hctR1dgQAcL86c88JJB5AYvbdQ/viewform"
+      },
+      {
         "text": "Report an issue",
         "url": "https://github.com/down-bad/advanced-rpc/issues/new"
       }
