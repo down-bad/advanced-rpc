@@ -2,13 +2,17 @@
 
 Fully customize your Discord Presence while listening to Cider.
 
+#### Featuring animated artwork  
+<img src="https://user-images.githubusercontent.com/19146783/206075465-b94abf0a-3622-414d-b8f5-601fb742bedd.gif" width="300">
+
 <img src="https://i.imgur.com/uGwe83D.gif" width="200"> <img src="https://i.imgur.com/SwgS6Jg.png" width="200"> <br> <img src="https://i.imgur.com/uf0JMys.png" width="200"> <img src="https://i.imgur.com/6Tt7MuE.png" width="200">
 
 ## Features
 
 - Customize every aspect of your Discord Presence, from the text, to the images, buttons & timestamps, all from an easy-to-use UI
+- Separate configurations for songs, videos, podcasts and radio
 - Easily change the Client ID to your own
-- More `{variables}` to use and ability convert them to uppercase and lowercase
+- Lots of `{variables}` and buttons to use and ability to stylize variables to uppercase and lowercase
 - Separate configurations for playback and pause
 - Constantly updated with new features and bug fixes through AdvancedRPC's built-in updater
 
