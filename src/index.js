@@ -35,11 +35,16 @@ module.exports = class AdvancedRpcBackend {
     };
     this.startedTime = null;
     this.updateTime = 0;
+    this.updatedAfterPause = false;
 
     this.coverImage = {
       id: null,
       url: null,
     };
+
+    this.remoteData = {};
+    this.artworks = {};
+    this.currentItem = {};
   }
 
   /*******************************************************************************************
@@ -136,8 +141,9 @@ module.exports = class AdvancedRpcBackend {
 
       ipcMain.on("discordrpc:updateImage", async (_event, artworkUrl) => {
         if (
+          !this.remoteData?.icloudArtworks ||
           this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
-          !this._attributes.songId.startsWith("i.")
+          this._attributes?.artwork?.url
         )
           return;
 
@@ -152,14 +158,32 @@ module.exports = class AdvancedRpcBackend {
           }
         );
 
-        this.coverImage.id = this._attributes.songId;
+        this.coverImage.id = this._attributes?.songId;
         this.coverImage.url = `https://images.weserv.nl/?url=${
-          res.data.imageUrl
+          res?.data?.imageUrl
         }&w=${this._settings.imageSize ?? 1024}&h=${
           this._settings.imageSize ?? 1024
         }&output=jpg&fit=cover`;
 
         this.setActivity(this._attributes);
+      });
+    } catch {}
+
+    try {
+      ipcMain.handle(`plugin.${this.name}.remoteData`, (_event, data) => {
+        this.remoteData = data;
+      });
+    } catch {}
+
+    try {
+      ipcMain.handle(`plugin.${this.name}.artworks`, (_event, artworks) => {
+        this.artworks = artworks;
+      });
+    } catch {}
+
+    try {
+      ipcMain.handle(`plugin.${this.name}.currentItem`, (_event, item) => {
+        this.currentItem = JSON.parse(item);
       });
     } catch {}
 
@@ -179,6 +203,14 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes (attributes.status = current state)
    */
   onPlaybackStateDidChange(attributes) {
+    if (attributes.kind !== "song") {
+      try {
+        this._utils
+          .getWindow()
+          .webContents.send(`plugin.${this.name}.itemChanged`, null);
+      } catch {}
+    }
+
     if (
       Object.keys(this._nextSettings).length !== 0 &&
       this._settings.applySettings === "state"
@@ -200,6 +232,12 @@ module.exports = class AdvancedRpcBackend {
    * @param attributes Music Attributes
    */
   onNowPlayingItemDidChange(attributes) {
+    try {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.itemChanged`, null);
+    } catch {}
+
     if (
       Object.keys(this._nextSettings).length !== 0 &&
       this._settings.applySettings === "state"
@@ -226,6 +264,14 @@ module.exports = class AdvancedRpcBackend {
         attributes.endTime - 5000 > Date.now()) ||
       attributes.kind === "radioStation"
     ) {
+      if (attributes.kind !== "song") {
+        try {
+          this._utils
+            .getWindow()
+            .webContents.send(`plugin.${this.name}.itemChanged`, null);
+        } catch {}
+      }
+
       this.setActivity(attributes);
     }
   }
@@ -278,6 +324,23 @@ module.exports = class AdvancedRpcBackend {
     }
 
     if (!this._client || !attributes) return;
+
+    if (
+      attributes.kind === "song" &&
+      this.currentItem?._songId !== attributes.songId &&
+      this.currentItem?.id !== attributes.songId
+    ) {
+      return setTimeout(() => {
+        try {
+          this._utils
+            .getWindow()
+            .webContents.send(`plugin.${this.name}.itemChanged`, null);
+        } catch {}
+        if (this.updateTime + 5000 < Date.now()) {
+          this.setActivity(attributes);
+        }
+      }, 3000);
+    }
 
     if (
       this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
@@ -342,15 +405,12 @@ module.exports = class AdvancedRpcBackend {
     if (this._settings.imageSize < 1) this._settings.imageSize = 1024;
 
     // Set large image
-    if (settings.largeImage === "cover") {
-      if (this.coverImage.id === attributes.songId && this.coverImage.url) {
-        activity.largeImageKey = this.coverImage.url;
-      } else {
-        activity.largeImageKey =
-          attributes.artwork?.url
-            ?.replace("{w}", this._settings.imageSize ?? 1024)
-            .replace("{h}", this._settings.imageSize ?? 1024) ?? fallbackImage;
-      }
+    if (settings.largeImage.startsWith("cover")) {
+      activity.largeImageKey = this.setImage(
+        attributes,
+        settings,
+        fallbackImage
+      );
 
       if (
         activity.largeImageKey !== fallbackImage &&
@@ -363,15 +423,12 @@ module.exports = class AdvancedRpcBackend {
 
     // Set small image
     activity.smallImageText = settings.smallImageText;
-    if (settings.smallImage === "cover") {
-      if (this.coverImage.id === attributes.songId && this.coverImage.url) {
-        activity.smallImageKey = this.coverImage.url;
-      } else {
-        activity.smallImageKey =
-          attributes.artwork?.url
-            ?.replace("{w}", this._settings.imageSize ?? 1024)
-            .replace("{h}", this._settings.imageSize ?? 1024) ?? fallbackImage;
-      }
+    if (settings.smallImage.startsWith("cover")) {
+      activity.smallImageKey = this.setImage(
+        attributes,
+        settings,
+        fallbackImage
+      );
 
       if (
         activity.smallImageKey !== fallbackImage &&
@@ -507,7 +564,12 @@ module.exports = class AdvancedRpcBackend {
         title: attributes.name ?? "",
         album: attributes.albumName ?? "",
         trackNumber: attributes.trackNumber ?? "",
+        trackCount: this.currentItem?._assets?.[0]?.metadata?.trackCount ?? "",
+        year: this.currentItem?._assets?.[0]?.metadata?.trackCount ?? "",
+        genre: this.currentItem?._assets?.[0]?.metadata?.genre ?? "",
         songId: attributes.songId ?? "",
+        albumId: this.currentItem?._assets?.[0]?.metadata?.playlistId ?? "",
+        artistId: this.currentItem?._assets?.[0]?.metadata?.artistId ?? "",
       },
       rpcUrlVars = {
         appleMusicUrl: `${attributes.url.appleMusic}?src=arpc`,
@@ -516,6 +578,18 @@ module.exports = class AdvancedRpcBackend {
         spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(
           rpcTextVars["artist"] + " - " + rpcTextVars["title"]
         )}?src=arpc`,
+        youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(
+          rpcTextVars["artist"] + " - " + rpcTextVars["title"]
+        )}&src=arpc`,
+        youtubeMusicUrl: `https://music.youtube.com/search?q=${encodeURIComponent(
+          rpcTextVars["artist"] + " - " + rpcTextVars["title"]
+        )}&src=arpc`,
+        albumUrl: rpcTextVars["albumId"]
+          ? `https://music.apple.com/album/${rpcTextVars["albumId"]}?src=arpc`
+          : "",
+        artistUrl: rpcTextVars["artistId"]
+          ? `https://music.apple.com/artist/${rpcTextVars["artistId"]}?src=arpc`
+          : "",
       };
 
     if (attributes.kind === "radioStation") {
@@ -529,6 +603,8 @@ module.exports = class AdvancedRpcBackend {
     if (attributes.kind === "podcast-episodes") {
       rpcTextVars["episodeNumber"] = attributes.episodeNumber ?? "";
       rpcUrlVars["assetUrl"] = attributes.assetUrl ?? "";
+      rpcUrlVars["applePodcastsUrl"] = this.currentItem?.attributes?.url ?? "";
+      rpcUrlVars["websiteUrl"] = this.currentItem?.attributes?.websiteUrl ?? "";
     }
 
     if (attributes.kind === "musicVideo")
@@ -550,6 +626,7 @@ module.exports = class AdvancedRpcBackend {
       }
 
       if (attributes.kind === "podcast-episodes") {
+        rpcUrlVars["appleMusicUrl"] = "";
         rpcUrlVars["ciderUrl"] = "";
         rpcUrlVars["songlinkUrl"] = "";
       }
@@ -749,6 +826,27 @@ module.exports = class AdvancedRpcBackend {
       return false;
     }
     return url.protocol === "http:" || url.protocol === "https:";
+  }
+
+  setImage(attributes, settings, fallbackImage) {
+    if (this.coverImage.id === attributes.songId && this.coverImage.url) {
+      return this.coverImage.url;
+    } else if (
+      attributes.kind === "song" &&
+      settings.largeImage === "cover" &&
+      this.remoteData?.animatedArtworks &&
+      this.artworks &&
+      this.currentItem?._songId === attributes.songId &&
+      this.artworks[this.currentItem?._assets?.[0]?.metadata?.playlistId]
+    ) {
+      return this.artworks[this.currentItem._assets[0].metadata.playlistId];
+    } else {
+      return (
+        attributes.artwork?.url
+          ?.replace("{w}", this._settings.imageSize ?? 1024)
+          .replace("{h}", this._settings.imageSize ?? 1024) ?? fallbackImage
+      );
+    }
   }
 
   setButtons(button1, button2, activity) {

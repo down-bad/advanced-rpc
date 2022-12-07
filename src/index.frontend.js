@@ -288,7 +288,7 @@ class AdvancedRpcFrontend {
             buttons: true,
             button1: {
               label: "Listen to this podcast",
-              url: "{appleMusicUrl}",
+              url: "{applePodcastsUrl}",
             },
             button2: {
               label: "",
@@ -310,7 +310,7 @@ class AdvancedRpcFrontend {
             usePlayButtons: true,
             button1: {
               label: "Listen to this podcast",
-              url: "{appleMusicUrl}",
+              url: "{applePodcastsUrl}",
             },
             button2: {
               label: "",
@@ -398,6 +398,19 @@ class AdvancedRpcFrontend {
   }
 
   async checkForUpdates(init) {
+    if (init) {
+      try {
+        this.remoteData = await fetch(
+          "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json"
+        ).then((response) => response.json());
+
+        ipcRenderer.invoke(
+          `plugin.${this.PLUGIN_NAME}.remoteData`,
+          this.remoteData
+        );
+      } catch (e) {}
+    }
+
     try {
       const { version } = await fetch(
         "https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json"
@@ -422,6 +435,16 @@ class AdvancedRpcFrontend {
     }
 
     try {
+      if (this.remoteData.animatedArtworks) {
+        const artworks = await fetch(
+          "https://files.imvasi.com/arpc/artworks.json"
+        ).then((response) => response.json());
+
+        ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.artworks`, artworks);
+      }
+    } catch {}
+
+    try {
       if (init) this.changelog = "Fetching changelog...";
 
       this.changelog = await fetch(
@@ -430,15 +453,15 @@ class AdvancedRpcFrontend {
     } catch (e) {
       this.changelog = "Failed to fetch changelog";
     }
-
-    if (init) {
-      try {
-        this.remoteData = await fetch(
-          "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json"
-        ).then((response) => response.json());
-      } catch (e) {}
-    }
   }
 }
 
 window.AdvancedRpc = new AdvancedRpcFrontend();
+
+ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.itemChanged`, (e, data) => {
+  const currentItem = localStorage.getItem("currentTrack");
+  ipcRenderer.invoke(
+    `plugin.${AdvancedRpc.PLUGIN_NAME}.currentItem`,
+    currentItem
+  );
+});
