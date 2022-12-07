@@ -2,8 +2,10 @@
 
 Fully customize your Discord Presence while listening to Cider.
 
-<img src="https://user-images.githubusercontent.com/19146783/206079313-be5f866f-4e15-4f1f-b643-7155972f18f1.gif" width="300">
-<img src="https://user-images.githubusercontent.com/19146783/206079322-007fc824-4d80-485b-9ad4-be1da2f12ddd.gif" width="300">
+<div>
+<img valign="middle" src="https://user-images.githubusercontent.com/19146783/206079313-be5f866f-4e15-4f1f-b643-7155972f18f1.gif" width="300">
+<img valign="middle" src="https://user-images.githubusercontent.com/19146783/206079322-007fc824-4d80-485b-9ad4-be1da2f12ddd.gif" width="300">
+</div>
 
 ## Features
 - **NEW**: Use animated artwork for eye-catching presences
