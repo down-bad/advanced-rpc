@@ -1,11 +1,11 @@
 {
   "bubbles": [
     {
-      "enabled": false,
-      "message": "AdvancedRPC 1.4.0 is coming soon! Click here for a sneak peek.",
-      "url": "https://i.imgur.com/IAJKSKY.png",
-      "color": "#DA70D6",
-      "icon": "info"
+      "enabled": true,
+      "message": "The {year} variable is not working as intended in this version and will be fixed with the next update.",
+      "color": "#f05d3c",
+      "icon": "info",
+      "versions": ["1.6.0"]
     }
   ],
   "sidebar": {
