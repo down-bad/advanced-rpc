@@ -565,7 +565,7 @@ module.exports = class AdvancedRpcBackend {
         album: attributes.albumName ?? "",
         trackNumber: attributes.trackNumber ?? "",
         trackCount: this.currentItem?._assets?.[0]?.metadata?.trackCount ?? "",
-        year: this.currentItem?._assets?.[0]?.metadata?.trackCount ?? "",
+        year: this.currentItem?._assets?.[0]?.metadata?.year ?? "",
         genre: this.currentItem?._assets?.[0]?.metadata?.genre ?? "",
         songId: attributes.songId ?? "",
         albumId: this.currentItem?._assets?.[0]?.metadata?.playlistId ?? "",
