@@ -2,14 +2,17 @@
 
 Fully customize your Discord Presence while listening to Cider.
 
-<img src="https://i.imgur.com/uGwe83D.gif" width="200"> <img src="https://i.imgur.com/SwgS6Jg.png" width="200"> <br> <img src="https://i.imgur.com/uf0JMys.png" width="200"> <img src="https://i.imgur.com/6Tt7MuE.png" width="200">
+<div>
+<img valign="middle" src="https://user-images.githubusercontent.com/19146783/206079313-be5f866f-4e15-4f1f-b643-7155972f18f1.gif" width="300">
+<img valign="middle" src="https://user-images.githubusercontent.com/19146783/206079322-007fc824-4d80-485b-9ad4-be1da2f12ddd.gif" width="300">
+</div>
 
 ## Features
-
+- **NEW**: Use animated artwork for eye-catching presences
 - Customize every aspect of your Discord Presence, from the text, to the images, buttons & timestamps, all from an easy-to-use UI
-- Easily change the Client ID to your own
-- More `{variables}` to use and ability convert them to uppercase and lowercase
-- Separate configurations for playback and pause
+- Separate configurations for songs, videos, podcasts, radio and the playback state for each of them
+- Ability to change the Client ID to your own
+- Lots of `{variables}` and buttons to use and ability to stylize variables to uppercase and lowercase
 - Constantly updated with new features and bug fixes through AdvancedRPC's built-in updater
 
 ## Instructions
