@@ -1,4 +1,4 @@
-/* Version: 1.4.1 - November 3, 2022 01:32:49 */
+/* Version: 1.5.0 - December 7, 2022 04:08:38 */
 'use strict';
 
 class AdvancedRpcFrontend {
@@ -6,7 +6,7 @@ class AdvancedRpcFrontend {
   SETTINGS_KEY = "settings";
   FRONTEND_KEY = "frontend";
   remoteData = null;
-  installedVersion = "1.4.1";
+  installedVersion = "1.5.0";
   latestVersion = undefined;
   changelog = undefined;
   unappliedSettings = false;
@@ -257,7 +257,7 @@ class AdvancedRpcFrontend {
           buttons: true,
           button1: {
             label: "Listen to this podcast",
-            url: "{appleMusicUrl}"
+            url: "{applePodcastsUrl}"
           },
           button2: {
             label: "",
@@ -279,7 +279,7 @@ class AdvancedRpcFrontend {
           usePlayButtons: true,
           button1: {
             label: "Listen to this podcast",
-            url: "{appleMusicUrl}"
+            url: "{applePodcastsUrl}"
           },
           button2: {
             label: "",
@@ -355,6 +355,12 @@ class AdvancedRpcFrontend {
     localStorage.setItem(`plugin.${this.PLUGIN_NAME}.${this.FRONTEND_KEY}`, JSON.stringify(data));
   }
   async checkForUpdates(init) {
+    if (init) {
+      try {
+        this.remoteData = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json").then(response => response.json());
+        ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.remoteData`, this.remoteData);
+      } catch (e) {}
+    }
     try {
       const {
         version
@@ -381,16 +387,21 @@ class AdvancedRpcFrontend {
       this.latestVersion = null;
     }
     try {
+      if (this.remoteData.animatedArtworks) {
+        const artworks = await fetch("https://files.imvasi.com/arpc/artworks.json").then(response => response.json());
+        ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.artworks`, artworks);
+      }
+    } catch {}
+    try {
       if (init) this.changelog = "Fetching changelog...";
       this.changelog = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/changelog.html").then(response => response.text());
     } catch (e) {
       this.changelog = "Failed to fetch changelog";
     }
-    if (init) {
-      try {
-        this.remoteData = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json").then(response => response.json());
-      } catch (e) {}
-    }
   }
 }
 window.AdvancedRpc = new AdvancedRpcFrontend();
+ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.itemChanged`, (e, data) => {
+  const currentItem = localStorage.getItem("currentTrack");
+  ipcRenderer.invoke(`plugin.${AdvancedRpc.PLUGIN_NAME}.currentItem`, currentItem);
+});

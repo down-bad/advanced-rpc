@@ -1,4 +1,4 @@
-/* Version: 1.4.1 - November 3, 2022 01:32:49 */
+/* Version: 1.5.0 - December 7, 2022 04:08:38 */
 'use strict';
 
 Vue.component("plugin.advancedrpc", {
@@ -250,7 +250,8 @@ Vue.component("plugin.advancedrpc", {
                       v-model="settings.play.largeImage"
                     >
                       <option value="disabled">Off</option>
-                      <option value="cover">Artwork</option>
+                      <option value="cover-static">Artwork</option>
+                      <option value="cover">Animated Artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -303,7 +304,8 @@ Vue.component("plugin.advancedrpc", {
                       v-model="settings.play.smallImage"
                     >
                       <option value="disabled">Off</option>
-                      <option value="cover">Artwork</option>
+                      <option value="cover-static">Artwork</option>
+                      <option value="cover">Animated Artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -464,7 +466,8 @@ Vue.component("plugin.advancedrpc", {
                       v-model="settings.pause.largeImage"
                     >
                       <option value="disabled">Off</option>
-                      <option value="cover">Artwork</option>
+                      <option value="cover-static">Artwork</option>
+                      <option value="cover">Animated Artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -520,7 +523,8 @@ Vue.component("plugin.advancedrpc", {
                       v-model="settings.pause.smallImage"
                     >
                       <option value="disabled">Off</option>
-                      <option value="cover">Artwork</option>
+                      <option value="cover-static">Artwork</option>
+                      <option value="cover">Animated Artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -2200,7 +2204,7 @@ Vue.component("plugin.advancedrpc", {
                 <small
                   >Changes the width and height of the artwork when used in the
                   presence. Larger values might cause the artwork to take longer
-                  to load for others.</small
+                  to load for others. Does not apply for animated artwork.</small
                 >
               </div>
               <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2355,7 +2359,7 @@ Vue.component("plugin.advancedrpc", {
           buttons: true,
           button1: {
             label: "Listen to this podcast",
-            url: "{appleMusicUrl}"
+            url: "{applePodcastsUrl}"
           },
           button2: {
             label: "",
@@ -2377,7 +2381,7 @@ Vue.component("plugin.advancedrpc", {
           usePlayButtons: true,
           button1: {
             label: "Listen to this podcast",
-            url: "{appleMusicUrl}"
+            url: "{applePodcastsUrl}"
           },
           button2: {
             label: "",
@@ -2438,7 +2442,7 @@ Vue.component("plugin.advancedrpc", {
     installedVersion: AdvancedRpc.installedVersion,
     latestVersion: AdvancedRpc.latestVersion,
     unappliedSettings: AdvancedRpc.unappliedSettings,
-    versionInfo: "1.4.1 - November 3, 2022 01:32:49",
+    versionInfo: "1.5.0 - December 7, 2022 04:08:38",
     textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
     urlVariables: "{appleMusicUrl}, {ciderUrl}",
     variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
@@ -2523,12 +2527,19 @@ Vue.component("arpc-variables-modal", {
         <div>{album}</div>
         <div>{composer}</div>
         <div>{trackNumber}</div>
+        <div>{trackCount}</div>
+        <div>{genre}</div>
+        <div>{year}</div>
         <div>{songId}</div>
+        <div>{albumId}</div>
+        <div>{artistId}</div>
       </div>
 
       <h4>Podcasts Variables</h4>
       <div id="arpc-variables">
         <div>{episodeNumber}</div>
+        <div>{applePodcastsUrl}</div>
+        <div>{websiteUrl}</div>
         <div>{assetUrl}</div>
       </div>
 
@@ -2552,9 +2563,13 @@ Vue.component("arpc-variables-modal", {
       <h4>URL Variables (for buttons)</h4>
       <div id="arpc-variables">
         <div>{appleMusicUrl}</div>
-        <div>{ciderUrl}</div>
+        <div>{albumUrl}</div>
+        <div>{artistUrl}</div>
         <div>{spotifyUrl}</div>
+        <div>{youtubeUrl}</div>
+        <div>{youtubeMusicUrl}</div>
         <div>{songlinkUrl}</div>
+        <div>{ciderUrl}</div>
       </div>
     </div>
   </div>
