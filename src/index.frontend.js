@@ -437,7 +437,7 @@ class AdvancedRpcFrontend {
     try {
       if (this.remoteData.animatedArtworks) {
         const artworks = await fetch(
-          "https://files.imvasi.com/arpc/artworks.json"
+          "https://files.imvasi.com/arpc/artworks.json", { cache: "reload"}
         ).then((response) => response.json());
 
         ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.artworks`, artworks);

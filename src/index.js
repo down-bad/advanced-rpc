@@ -35,7 +35,6 @@ module.exports = class AdvancedRpcBackend {
     };
     this.startedTime = null;
     this.updateTime = 0;
-    this.updatedAfterPause = false;
 
     this.coverImage = {
       id: null,
@@ -47,13 +46,6 @@ module.exports = class AdvancedRpcBackend {
     this.currentItem = {};
   }
 
-  /*******************************************************************************************
-   * Public Methods
-   * ****************************************************************************************/
-
-  /**
-   * Runs on app ready
-   */
   onReady(_win) {
     console.log(`[Plugin][${this.name}] Ready.`);
   }
@@ -183,7 +175,8 @@ module.exports = class AdvancedRpcBackend {
 
     try {
       ipcMain.handle(`plugin.${this.name}.currentItem`, (_event, item) => {
-        this.currentItem = JSON.parse(item);
+        if (item) this.currentItem = JSON.parse(item);
+        else this.currentItem = {};
       });
     } catch {}
 
@@ -191,95 +184,10 @@ module.exports = class AdvancedRpcBackend {
     this._env.utils.loadJSFrontend(join(this._env.dir, "frontend-vue.js"));
   }
 
-  /**
-   * Runs on app stop
-   */
   onBeforeQuit() {
     console.debug(`[Plugin][${this.name}] Stopped.`);
   }
 
-  /**
-   * Runs on playback State Change
-   * @param attributes Music Attributes (attributes.status = current state)
-   */
-  onPlaybackStateDidChange(attributes) {
-    if (attributes.kind !== "song") {
-      try {
-        this._utils
-          .getWindow()
-          .webContents.send(`plugin.${this.name}.itemChanged`, null);
-      } catch {}
-    }
-
-    if (
-      Object.keys(this._nextSettings).length !== 0 &&
-      this._settings.applySettings === "state"
-    ) {
-      this._utils
-        .getWindow()
-        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-      this._settings = this._nextSettings;
-      this._nextSettings = {};
-      this._initSettings = {};
-    }
-
-    this.startedTime = Date.now();
-    this.setActivity(attributes);
-  }
-
-  /**
-   * Runs on song change
-   * @param attributes Music Attributes
-   */
-  onNowPlayingItemDidChange(attributes) {
-    try {
-      this._utils
-        .getWindow()
-        .webContents.send(`plugin.${this.name}.itemChanged`, null);
-    } catch {}
-
-    if (
-      Object.keys(this._nextSettings).length !== 0 &&
-      this._settings.applySettings === "state"
-    ) {
-      this._utils
-        .getWindow()
-        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-      this._settings = this._nextSettings;
-      this._nextSettings = {};
-      this._initSettings = {};
-    }
-
-    this.startedTime = Date.now();
-    this.setActivity(attributes);
-  }
-
-  /**
-   * Runs on playback time change
-   * @param attributes Music Attributes
-   */
-  playbackTimeDidChange(attributes) {
-    if (
-      (this.updateTime + 5000 < Date.now() &&
-        attributes.endTime - 5000 > Date.now()) ||
-      attributes.kind === "radioStation"
-    ) {
-      if (attributes.kind !== "song") {
-        try {
-          this._utils
-            .getWindow()
-            .webContents.send(`plugin.${this.name}.itemChanged`, null);
-        } catch {}
-      }
-
-      this.setActivity(attributes);
-    }
-  }
-
-  /**
-   * Connect to Discord RPC
-   * @private
-   */
   connect() {
     // Create the client
     this._client = new AutoClient({ transport: "ipc" });
@@ -309,10 +217,72 @@ module.exports = class AdvancedRpcBackend {
       .catch((e) => console.error(`[Plugin][${this.name}][connect] ${e}`));
   }
 
-  /**
-   * Sets the activity
-   * @param attributes Music Attributes
-   */
+  onPlaybackStateDidChange(attributes) {
+    if (attributes.kind !== "song") {
+      try {
+        this._utils
+          .getWindow()
+          .webContents.send(`plugin.${this.name}.itemChanged`, null);
+      } catch {}
+    }
+
+    if (
+      Object.keys(this._nextSettings).length !== 0 &&
+      this._settings.applySettings === "state"
+    ) {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      this._settings = this._nextSettings;
+      this._nextSettings = {};
+      this._initSettings = {};
+    }
+
+    this.startedTime = Date.now();
+    this.setActivity(attributes);
+  }
+
+  onNowPlayingItemDidChange(attributes) {
+    try {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.itemChanged`, null);
+    } catch {}
+
+    if (
+      Object.keys(this._nextSettings).length !== 0 &&
+      this._settings.applySettings === "state"
+    ) {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      this._settings = this._nextSettings;
+      this._nextSettings = {};
+      this._initSettings = {};
+    }
+
+    this.startedTime = Date.now();
+    this.setActivity(attributes);
+  }
+
+  playbackTimeDidChange(attributes) {
+    if (
+      (this.updateTime + 5000 < Date.now() &&
+        attributes.endTime - 5000 > Date.now()) ||
+      attributes.kind === "radioStation"
+    ) {
+      if (attributes.kind !== "song") {
+        try {
+          this._utils
+            .getWindow()
+            .webContents.send(`plugin.${this.name}.itemChanged`, null);
+        } catch {}
+      }
+
+      this.setActivity(attributes);
+    }
+  }
+
   setActivity(attributes) {
     this._attributes = attributes;
 
@@ -814,10 +784,6 @@ module.exports = class AdvancedRpcBackend {
     return activity;
   }
 
-  /**
-   * Checks if URL is valid
-   * @param str URL
-   */
   isValidUrl(str) {
     let url;
     try {
