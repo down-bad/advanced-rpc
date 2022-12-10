@@ -1,4 +1,4 @@
-/* Version: 1.5.0 - December 7, 2022 04:08:38 */
+/* Version: 1.5.1 - December 10, 2022 12:15:49 */
 'use strict';
 
 var require$$0$1 = require('fs');
@@ -102920,7 +102920,7 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.5.0";
+    this.version = "1.5.1";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
     this._prevSettings = {};
@@ -102942,7 +102942,6 @@ var src = class AdvancedRpcBackend {
     };
     this.startedTime = null;
     this.updateTime = 0;
-    this.updatedAfterPause = false;
     this.coverImage = {
       id: null,
       url: null
@@ -102951,14 +102950,6 @@ var src = class AdvancedRpcBackend {
     this.artworks = {};
     this.currentItem = {};
   }
-
-  /*******************************************************************************************
-   * Public Methods
-   * ****************************************************************************************/
-
-  /**
-   * Runs on app ready
-   */
   onReady(_win) {
     console.log(`[Plugin][${this.name}] Ready.`);
   }
@@ -103034,77 +103025,15 @@ var src = class AdvancedRpcBackend {
     } catch {}
     try {
       ipcMain.handle(`plugin.${this.name}.currentItem`, (_event, item) => {
-        this.currentItem = JSON.parse(item);
+        if (item) this.currentItem = JSON.parse(item);else this.currentItem = {};
       });
     } catch {}
     this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
     this._env.utils.loadJSFrontend(join(this._env.dir, "frontend-vue.js"));
   }
-
-  /**
-   * Runs on app stop
-   */
   onBeforeQuit() {
     console.debug(`[Plugin][${this.name}] Stopped.`);
   }
-
-  /**
-   * Runs on playback State Change
-   * @param attributes Music Attributes (attributes.status = current state)
-   */
-  onPlaybackStateDidChange(attributes) {
-    if (attributes.kind !== "song") {
-      try {
-        this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, null);
-      } catch {}
-    }
-    if (Object.keys(this._nextSettings).length !== 0 && this._settings.applySettings === "state") {
-      this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-      this._settings = this._nextSettings;
-      this._nextSettings = {};
-      this._initSettings = {};
-    }
-    this.startedTime = Date.now();
-    this.setActivity(attributes);
-  }
-
-  /**
-   * Runs on song change
-   * @param attributes Music Attributes
-   */
-  onNowPlayingItemDidChange(attributes) {
-    try {
-      this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, null);
-    } catch {}
-    if (Object.keys(this._nextSettings).length !== 0 && this._settings.applySettings === "state") {
-      this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-      this._settings = this._nextSettings;
-      this._nextSettings = {};
-      this._initSettings = {};
-    }
-    this.startedTime = Date.now();
-    this.setActivity(attributes);
-  }
-
-  /**
-   * Runs on playback time change
-   * @param attributes Music Attributes
-   */
-  playbackTimeDidChange(attributes) {
-    if (this.updateTime + 5000 < Date.now() && attributes.endTime - 5000 > Date.now() || attributes.kind === "radioStation") {
-      if (attributes.kind !== "song") {
-        try {
-          this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, null);
-        } catch {}
-      }
-      this.setActivity(attributes);
-    }
-  }
-
-  /**
-   * Connect to Discord RPC
-   * @private
-   */
   connect() {
     // Create the client
     this._client = new AutoClient({
@@ -103127,11 +103056,44 @@ var src = class AdvancedRpcBackend {
       this.ready = true;
     }).catch(e => console.error(`[Plugin][${this.name}][connect] ${e}`));
   }
-
-  /**
-   * Sets the activity
-   * @param attributes Music Attributes
-   */
+  onPlaybackStateDidChange(attributes) {
+    if (attributes.kind !== "song") {
+      try {
+        this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, null);
+      } catch {}
+    }
+    if (Object.keys(this._nextSettings).length !== 0 && this._settings.applySettings === "state") {
+      this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      this._settings = this._nextSettings;
+      this._nextSettings = {};
+      this._initSettings = {};
+    }
+    this.startedTime = Date.now();
+    this.setActivity(attributes);
+  }
+  onNowPlayingItemDidChange(attributes) {
+    try {
+      this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, null);
+    } catch {}
+    if (Object.keys(this._nextSettings).length !== 0 && this._settings.applySettings === "state") {
+      this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      this._settings = this._nextSettings;
+      this._nextSettings = {};
+      this._initSettings = {};
+    }
+    this.startedTime = Date.now();
+    this.setActivity(attributes);
+  }
+  playbackTimeDidChange(attributes) {
+    if (this.updateTime + 5000 < Date.now() && attributes.endTime - 5000 > Date.now() || attributes.kind === "radioStation") {
+      if (attributes.kind !== "song") {
+        try {
+          this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, null);
+        } catch {}
+      }
+      this.setActivity(attributes);
+    }
+  }
   setActivity(attributes) {
     this._attributes = attributes;
     if (this._settings.applySettings === "immediately") {
@@ -103253,7 +103215,7 @@ var src = class AdvancedRpcBackend {
         album: attributes.albumName ?? "",
         trackNumber: attributes.trackNumber ?? "",
         trackCount: this.currentItem?._assets?.[0]?.metadata?.trackCount ?? "",
-        year: this.currentItem?._assets?.[0]?.metadata?.trackCount ?? "",
+        year: this.currentItem?._assets?.[0]?.metadata?.year ?? "",
         genre: this.currentItem?._assets?.[0]?.metadata?.genre ?? "",
         songId: attributes.songId ?? "",
         albumId: this.currentItem?._assets?.[0]?.metadata?.playlistId ?? "",
@@ -103415,11 +103377,6 @@ var src = class AdvancedRpcBackend {
     if (activity.buttons?.length === 0) delete activity.buttons;
     return activity;
   }
-
-  /**
-   * Checks if URL is valid
-   * @param str URL
-   */
   isValidUrl(str) {
     let url;
     try {

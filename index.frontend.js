@@ -1,4 +1,4 @@
-/* Version: 1.5.0 - December 7, 2022 04:08:38 */
+/* Version: 1.5.1 - December 10, 2022 12:15:49 */
 'use strict';
 
 class AdvancedRpcFrontend {
@@ -6,7 +6,7 @@ class AdvancedRpcFrontend {
   SETTINGS_KEY = "settings";
   FRONTEND_KEY = "frontend";
   remoteData = null;
-  installedVersion = "1.5.0";
+  installedVersion = "1.5.1";
   latestVersion = undefined;
   changelog = undefined;
   unappliedSettings = false;
@@ -388,7 +388,9 @@ class AdvancedRpcFrontend {
     }
     try {
       if (this.remoteData.animatedArtworks) {
-        const artworks = await fetch("https://files.imvasi.com/arpc/artworks.json").then(response => response.json());
+        const artworks = await fetch("https://files.imvasi.com/arpc/artworks.json", {
+          cache: "reload"
+        }).then(response => response.json());
         ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.artworks`, artworks);
       }
     } catch {}
