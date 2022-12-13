@@ -1,3 +1,17 @@
+import Frontend from "./components/frontend-vue.js";
+import Bubble from "./components/bubble.js";
+import Changelog from "./components/changelog.js";
+import ExpandButton from "./components/expand-button.js";
+import CloseButton from "./components/close-button.js";
+import Variables from "./components/variables.js";
+
+Frontend;
+Bubble;
+Changelog;
+ExpandButton;
+CloseButton;
+Variables;
+
 class AdvancedRpcFrontend {
   PLUGIN_NAME = "AdvancedRPC";
   SETTINGS_KEY = "settings";
@@ -437,7 +451,8 @@ class AdvancedRpcFrontend {
     try {
       if (this.remoteData.animatedArtworks) {
         const artworks = await fetch(
-          "https://files.imvasi.com/arpc/artworks.json", { cache: "reload"}
+          "https://files.imvasi.com/arpc/artworks.json",
+          { cache: "reload" }
         ).then((response) => response.json());
 
         ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.artworks`, artworks);
