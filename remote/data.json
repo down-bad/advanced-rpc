@@ -33,7 +33,7 @@
         "id": "videos"
       },
       {
-        "text": "Radio",
+        "text": "Radio Stations",
         "dest": "arpc.radio",
         "id": "radio"
       },
@@ -59,6 +59,7 @@
       },
       {
         "text": "Changelog",
+        "updateText": "Update available!",
         "dest": "modal.changelog"
       }
     ]
