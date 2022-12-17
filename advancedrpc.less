@@ -61,8 +61,7 @@
 
 .advancedrpc {
   * {
-    font-family: "gg sans", "Whitney", "Helvetica Neue", Helvetica, Arial,
-      sans-serif !important;
+    font-family: "gg sans", "Whitney", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
   }
 
   a {
@@ -143,7 +142,6 @@
   transition: zoom 1s;
   zoom: 1;
   text-rendering: optimizeLegibility;
-  min-height: 100vh;
 
   * {
     transition: opacity 0.2s ease-in-out;
@@ -177,6 +175,7 @@
   padding: 32px;
   padding-bottom: 20px;
   padding-left: 0;
+  min-height: 100vh;
 
   footer {
     display: flex;
@@ -283,11 +282,6 @@
     margin-top: 10px;
     opacity: 15%;
   }
-
-  footer:hover {
-    opacity: 35%;
-    cursor: pointer;
-  }
 }
 
 .arpc-content {
@@ -304,7 +298,6 @@
 
 .arpc-unapplied-settings-content {
   background-color: #202225;
-  font-weight: 500;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -312,16 +305,18 @@
   margin-left: 220px;
   position: relative;
   top: -100%;
+
+  a {
+    font-size: 14px;
+    color: #fff;
+    margin-right: 20px;
+  }
 }
 
 .arpc-unapplied-settings-options {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  button {
-    margin-left: 10px;
-  }
 }
 
 .arpc-header {
@@ -510,10 +505,6 @@
   transition: background-color 0.17s ease, color 0.17s ease;
 }
 
-.arpc-button-underline:hover {
-  text-decoration: underline;
-}
-
 .arpc-button-blue {
   background-color: #5865f2;
 }
@@ -536,18 +527,6 @@
 
 .arpc-button-green:active {
   background-color: #1e532e;
-}
-
-.arpc-button-red {
-  background-color: #d83c3e;
-}
-
-.arpc-button-red:hover {
-  background-color: #a12d2f;
-}
-
-.arpc-button-red:active {
-  background-color: #8c2729;
 }
 
 .arpc-var-button {
@@ -659,15 +638,6 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-
-      div {
-        display: flex;
-        align-items: center;
-
-        button {
-          margin-left: 5px;
-        }
-      }
     }
   }
 
