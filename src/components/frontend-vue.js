@@ -11,6 +11,14 @@ export default Vue.component("plugin.advancedrpc", {
       v-if="modal === 'variables'"
       @close-variables="setModal('')"
     />
+
+    <arpc-confirm-modal
+      v-if="modal === 'reset-settings'"
+      title="Reset Settings"
+      description="This will reset your AdvancedRPC configuration to default. Are you sure you want to continue?"
+      @confirm="resetSettings()"
+      @close-modal="setModal('')"
+    />
   </Transition>
 
   <Transition name="arpc-fade">
@@ -29,7 +37,12 @@ export default Vue.component("plugin.advancedrpc", {
           </div>
           <div v-else>;)</div>
           <div class="arpc-unapplied-settings-options">
-            <a @click="resetChanges()">Reset</a>
+            <button
+              class="arpc-button arpc-button-underline"
+              @click="resetChanges()"
+            >
+              Reset
+            </button>
             <button
               class="arpc-button arpc-button-green"
               @click="updateSettings()"
@@ -42,102 +55,15 @@ export default Vue.component("plugin.advancedrpc", {
     >
 
     <div class="arpc-settings">
-      <div class="arpc-sidebar">
-        <div>
-          <div class="arpc-header">
-            <h1>AdvancedRPC</h1>
-            <img
-              v-if="remoteData?.titleDecorations?.rightImage"
-              :src="remoteData?.titleDecorations?.rightImage"
-              width="40"
-              height="40"
-              draggable="false"
-            />
-          </div>
-
-          <div
-            class="arpc-sidebar-item"
-            :class="frontend.sidebar === 'general' ? 'arpc-sidebar-selected' : ''"
-            @click="changeSidebarItem('general')"
-          >
-            General
-          </div>
-          <div
-            class="arpc-sidebar-item"
-            :class="frontend.sidebar === 'videos' ? 'arpc-sidebar-selected' : ''"
-            @click="changeSidebarItem('videos')"
-          >
-            Videos
-          </div>
-          <div
-            class="arpc-sidebar-item"
-            :class="frontend.sidebar === 'radio' ? 'arpc-sidebar-selected' : ''"
-            @click="changeSidebarItem('radio')"
-          >
-            Radio Stations
-          </div>
-          <div
-            class="arpc-sidebar-item"
-            :class="frontend.sidebar === 'podcasts' ? 'arpc-sidebar-selected' : ''"
-            @click="changeSidebarItem('podcasts')"
-          >
-            Podcasts
-          </div>
-          <div
-            class="arpc-sidebar-item"
-            :class="frontend.sidebar === 'settings' ? 'arpc-sidebar-selected' : ''"
-            @click="changeSidebarItem('settings')"
-          >
-            Settings
-          </div>
-          <div
-            v-for="item in remoteData?.sidebar?.upper"
-            class="arpc-sidebar-item"
-            @click="openLink(item.url)"
-          >
-            {{ item.text }}
-          </div>
-        </div>
-        <div>
-          <div
-            v-for="item in remoteData?.sidebar?.lower"
-            class="arpc-sidebar-item"
-            @click="openLink(item.url)"
-          >
-            {{ item.text }}
-          </div>
-          <div
-            v-if="installedVersion < latestVersion"
-            class="arpc-sidebar-item arpc-sidebar-blue"
-            @click="setModal('changelog')"
-          >
-            <div>Update Available</div>
-            <svg
-              aria-hidden="true"
-              role="img"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              style="width: 19px; height: 19px; display: block"
-            >
-              <path
-                fill="#FFF"
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M16.293 9.293L17.707 10.707L12 16.414L6.29297 10.707L7.70697 9.293L11 12.586V2H13V12.586L16.293 9.293ZM18 20V18H20V20C20 21.102 19.104 22 18 22H6C4.896 22 4 21.102 4 20V18H6V20H18Z"
-              ></path>
-            </svg>
-          </div>
-          <div
-            v-if="installedVersion >= latestVersion"
-            class="arpc-sidebar-item"
-            @click="setModal('changelog')"
-          >
-            Changelog
-          </div>
-          <footer>{{ versionInfo }}</footer>
-        </div>
-      </div>
+      <arpc-sidebar
+        :installedVersion="installedVersion"
+        :latestVersion="latestVersion"
+        :versionInfo="versionInfo"
+        :remoteData="remoteData"
+        :frontend="frontend"
+        @sidebar-item="changeSidebarItem"
+        @set-modal="setModal"
+      ></arpc-sidebar>
 
       <div class="arpc-content">
         <arpc-bubble
@@ -2201,7 +2127,8 @@ export default Vue.component("plugin.advancedrpc", {
                 <small
                   >Changes the width and height of the artwork when used in the
                   presence. Larger values might cause the artwork to take longer
-                  to load for others. Does not apply for animated artwork.</small
+                  to load for others. Does not apply for animated
+                  artwork.</small
                 >
               </div>
               <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2237,22 +2164,34 @@ export default Vue.component("plugin.advancedrpc", {
 
             <div class="arpc-option">
               <div class="arpc-option-segment">
-                Apply Settings
+                Apply Settings Immediately
                 <small
-                  >Set whether to apply the settings manually, on play/pause or
-                  immediately while editing them. Applying them immediately can
-                  cause rate limits.</small
+                  >Apply settings to your Discord presence as you change them.
+                  This can cause rate limits.</small
                 >
               </div>
-
               <div class="arpc-option-segment arpc-option-segment_auto">
                 <label>
-                  <select class="arpc-select" v-model="settings.applySettings">
-                    <option value="manually">Manually</option>
-                    <option value="state">On State Change</option>
-                    <option value="immediately">Immediately</option>
-                  </select>
+                  <input
+                    type="checkbox"
+                    v-model="settings.applySettings"
+                    true-value="immediately"
+                    false-value="manually"
+                    switch
+                  />
                 </label>
+              </div>
+            </div>
+
+            <div class="arpc-option">
+              <div class="arpc-option-segment">Reset Settings to Default</div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <button
+                  class="arpc-button arpc-button-red"
+                  @click="setModal('reset-settings')"
+                >
+                  Reset
+                </button>
               </div>
             </div>
           </div>
@@ -2433,7 +2372,7 @@ export default Vue.component("plugin.advancedrpc", {
         },
       },
       imageSize: 1024,
-      applySettings: "state",
+      applySettings: "manually",
       removeInvalidButtons: true,
     },
     installedVersion: AdvancedRpc.installedVersion,
@@ -2496,25 +2435,35 @@ export default Vue.component("plugin.advancedrpc", {
     this.frontend = frontend;
   },
   methods: {
-    updateSettings() {
-      ipcRenderer
-        .invoke(
-          `plugin.${AdvancedRpc.PLUGIN_NAME}.updateSettings`,
-          this.settings
-        )
-        .then(() => {
-          notyf.success({
-            message: "Settings applied",
-            background: "#2D7D46",
-            dismissible: true,
-          });
-        });
+    async updateSettings() {
+      await ipcRenderer.invoke(
+        `plugin.${AdvancedRpc.PLUGIN_NAME}.updateSettings`,
+        this.settings
+      );
+      notyf.success({
+        message: "Settings applied",
+        background: "#2D7D46",
+        dismissible: true,
+      });
     },
     resetChanges() {
       ipcRenderer.invoke(
         `plugin.${AdvancedRpc.PLUGIN_NAME}.resetChanges`,
         this.settings
       );
+    },
+    async resetSettings() {
+      await AdvancedRpc.setDefaultSettings();
+      this.settings = await AdvancedRpc.getSettings();
+      await ipcRenderer.invoke(
+        `plugin.${AdvancedRpc.PLUGIN_NAME}.updateSettings`,
+        this.settings
+      );
+      notyf.success({
+        message: "Your settings have been reset",
+        background: "#d83c3e",
+        dismissible: true,
+      });
     },
     setModal(modal) {
       this.modal = modal;

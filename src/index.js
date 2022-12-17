@@ -35,6 +35,8 @@ module.exports = class AdvancedRpcBackend {
     };
     this.startedTime = null;
     this.updateTime = 0;
+    this.pauseTime = Date.now();
+    this.itemId = "0";
 
     this.coverImage = {
       id: null,
@@ -238,7 +240,14 @@ module.exports = class AdvancedRpcBackend {
       this._initSettings = {};
     }
 
-    this.startedTime = Date.now();
+    if (!attributes.status) this.pauseTime = Date.now();
+    else this.startedTime = Date.now() - (this.pauseTime - this.startedTime);
+
+    // Workaround for non-song items so we can know if the item has changed
+    if (this.itemId !== attributes.songId) this.startedTime = Date.now();
+    this.itemId = attributes.songId;
+
+    if (attributes.kind === "radioStation") this.startedTime = Date.now();
     this.setActivity(attributes);
   }
 
@@ -262,6 +271,7 @@ module.exports = class AdvancedRpcBackend {
     }
 
     this.startedTime = Date.now();
+    this.pauseTime = Date.now();
     this.setActivity(attributes);
   }
 

@@ -4,13 +4,18 @@ import Changelog from "./components/changelog.js";
 import ExpandButton from "./components/expand-button.js";
 import CloseButton from "./components/close-button.js";
 import Variables from "./components/variables.js";
+import Sidebar from "./components/sidebar.js";
+import ConfirmModal from "./components/confirm-modal.js";
 
+// To remove "import not used" warnings
 Frontend;
 Bubble;
 Changelog;
 ExpandButton;
 CloseButton;
 Variables;
+Sidebar;
+ConfirmModal;
 
 class AdvancedRpcFrontend {
   PLUGIN_NAME = "AdvancedRPC";
@@ -26,6 +31,7 @@ class AdvancedRpcFrontend {
 
   constructor() {
     console.log(`[Plugin][${this.PLUGIN_NAME}] Frontend established.`);
+
     CiderFrontAPI.StyleSheets.Add("./plugins/gh_510140500/advancedrpc.less");
     const menuEntry = new CiderFrontAPI.Objects.MenuEntry();
     menuEntry.id = window.uuidv4();
@@ -34,6 +40,7 @@ class AdvancedRpcFrontend {
       app.appRoute("plugin/advancedrpc");
     };
     CiderFrontAPI.AddMenuEntry(menuEntry);
+
     this.initSettings();
     ipcRenderer.invoke(
       `plugin.${this.PLUGIN_NAME}.initSettings`,
@@ -42,6 +49,7 @@ class AdvancedRpcFrontend {
     this.checkForUpdates((this.init = true));
   }
 
+  // Gets settings from localStorage or sets default settings if none are found
   getSettings() {
     try {
       const data = localStorage.getItem(
@@ -56,6 +64,7 @@ class AdvancedRpcFrontend {
     }
   }
 
+  // Sets settings in localStorage
   setSettings(data) {
     localStorage.setItem(
       `plugin.${this.PLUGIN_NAME}.${this.SETTINGS_KEY}`,
@@ -63,6 +72,7 @@ class AdvancedRpcFrontend {
     );
   }
 
+  // Check if user's settings are up to date with AdvancedRPC updates
   initSettings() {
     let settings = this.getSettings();
 
@@ -83,7 +93,9 @@ class AdvancedRpcFrontend {
       settings["play"]["fallbackImage"] = "applemusic";
     if (!settings.pause.fallbackImage)
       settings["pause"]["fallbackImage"] = "applemusic";
-    if (!settings.applySettings) settings["applySettings"] = "state";
+    if (!settings.applySettings) settings["applySettings"] = "manually";
+    if (settings.applySettings === "state")
+      settings["applySettings"] = "manually";
 
     if (typeof settings.removeInvalidButtons === "undefined")
       settings["removeInvalidButtons"] = true;
@@ -212,6 +224,7 @@ class AdvancedRpcFrontend {
     this.setSettings(settings);
   }
 
+  // Sets default settings in localStorage
   setDefaultSettings() {
     localStorage.setItem(
       `plugin.${this.PLUGIN_NAME}.${this.SETTINGS_KEY}`,
@@ -379,12 +392,13 @@ class AdvancedRpcFrontend {
           },
         },
         imageSize: 1024,
-        applySettings: "state",
+        applySettings: "manually",
         removeInvalidButtons: true,
       })
     );
   }
 
+  // Gets frontend data from localStorage or sets default values if none are found
   getFrontendData() {
     try {
       const data = localStorage.getItem(
@@ -404,6 +418,7 @@ class AdvancedRpcFrontend {
     }
   }
 
+  // Sets frontend data to localStorage
   setFrontendData(data) {
     localStorage.setItem(
       `plugin.${this.PLUGIN_NAME}.${this.FRONTEND_KEY}`,
@@ -412,18 +427,16 @@ class AdvancedRpcFrontend {
   }
 
   async checkForUpdates(init) {
-    if (init) {
-      try {
-        this.remoteData = await fetch(
-          "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json"
-        ).then((response) => response.json());
+    try {
+      this.remoteData = await fetch(
+        "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json"
+      ).then((response) => response.json());
 
-        ipcRenderer.invoke(
-          `plugin.${this.PLUGIN_NAME}.remoteData`,
-          this.remoteData
-        );
-      } catch (e) {}
-    }
+      ipcRenderer.invoke(
+        `plugin.${this.PLUGIN_NAME}.remoteData`,
+        this.remoteData
+      );
+    } catch (e) {}
 
     try {
       const { version } = await fetch(
