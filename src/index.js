@@ -183,7 +183,6 @@ module.exports = class AdvancedRpcBackend {
     } catch {}
 
     this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
-    this._env.utils.loadJSFrontend(join(this._env.dir, "frontend-vue.js"));
   }
 
   onBeforeQuit() {
