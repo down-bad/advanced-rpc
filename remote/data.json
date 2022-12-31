@@ -8,18 +8,6 @@
       "versions": ["1.5.0"]
     }
   ],
-  "sidebar": {
-    "lower": [
-      {
-        "text": "Request animated artwork",
-        "url": "https://docs.google.com/forms/d/e/1FAIpQLSdW0VKj-MdvMSlV59jR-Ti2hctR1dgQAcL86c88JJB5AYvbdQ/viewform"
-      },
-      {
-        "text": "Report an issue",
-        "url": "https://github.com/down-bad/advanced-rpc/issues/new"
-      }
-    ]
-  },
   "sidebarItems": {
     "upper": [
       {
@@ -65,7 +53,7 @@
     ]
   },
   "titleDecorations": {
-    "rightImage": "https://cdn.betterttv.net/emote/5fb184cc4dfba164402a0590/3x"
+    "rightImage": "https://i.imgur.com/yFeN5tO.gif"
   },
   "animatedArtworks": true,
   "icloudArtworks": false
