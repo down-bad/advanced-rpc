@@ -16,9 +16,9 @@
         "id": "general"
       },
       {
-        "text": "Videos",
-        "dest": "arpc.videos",
-        "id": "videos"
+        "text": "Podcasts",
+        "dest": "arpc.podcasts",
+        "id": "podcasts"
       },
       {
         "text": "Radio Stations",
@@ -26,9 +26,9 @@
         "id": "radio"
       },
       {
-        "text": "Podcasts",
-        "dest": "arpc.podcasts",
-        "id": "podcasts"
+        "text": "Videos",
+        "dest": "arpc.videos",
+        "id": "videos"
       },
       {
         "text": "Settings",
