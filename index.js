@@ -1,4 +1,4 @@
-/* Version: 1.5.3 - December 17, 2022 10:50:24 */
+/* Version: 1.5.4 - February 2, 2023 11:08:19 */
 'use strict';
 
 var require$$0$1 = require('fs');
@@ -103002,7 +103002,7 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.5.3";
+    this.version = "1.5.4";
     this.author = "down-bad (Vasilis#1517)";
     this._settings = {};
     this._prevSettings = {};

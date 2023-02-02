@@ -1,4 +1,4 @@
-/* Version: 1.5.3 - December 17, 2022 10:50:24 */
+/* Version: 1.5.4 - February 2, 2023 11:08:19 */
 (function () {
   'use strict';
 
@@ -36,7 +36,10 @@
           <div v-if="settings.applySettings === 'state'">
             Your changes will apply on playback state change. Apply now?
           </div>
-          <div v-else-if="settings.applySettings === 'manually'">
+          <div
+            @click="clickingEe('unappliedTextEe')"
+            v-else-if="settings.applySettings === 'manually'"
+          >
             You've made changes, apply them to update your Discord presence.
           </div>
           <div v-else>;)</div>
@@ -67,33 +70,59 @@
         :frontend="frontend"
         @sidebar-item="changeSidebarItem"
         @set-modal="setModal"
+        @set-theme="unlockTheme"
+        @click-ee="clickingEe"
       ></arpc-sidebar>
 
       <div class="arpc-content">
-        <arpc-bubble
-          v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
-          :message="strings.private_session_enabled"
-          icon="info"
-          color="#00aff4"
-        ></arpc-bubble>
+        <Transition name="arpc-settings-slide">
+          <div
+            class="arpc-bubbles-bar arpc-expandable"
+            @click="toggleBubbles()"
+            v-if="bubbles.length > 0 || ($root.cfg.general.privateEnabled && settings.respectPrivateSession) || app.cfg.connectivity.discord_rpc.enabled"
+          >
+            <div
+              class="arpc-bubbles-count"
+              :style="{'opacity': frontend.bubblesExpanded ? 0 : 1}"
+            >
+              <div v-if="bubbles.length === 1">{{ bubbles.length }} notice</div>
+              <div v-else>{{ bubbles.length }} notices</div>
+            </div>
+            <arpc-expand-button
+              :expanded="frontend.bubblesExpanded"
+            ></arpc-expand-button></div
+        ></Transition>
 
-        <arpc-bubble
-          v-if="app.cfg.connectivity.discord_rpc.enabled"
-          :message="strings.disable_cider_rpc"
-          icon="warning"
-          color="#faa81a"
-        ></arpc-bubble>
+        <Transition name="arpc-settings-slide">
+          <div v-show="frontend.bubblesExpanded">
+            <Transition name="arpc-settings-slide">
+              <arpc-bubble
+                v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
+                v-bind="privateSessionBubble"
+              ></arpc-bubble
+            ></Transition>
 
-        <arpc-bubble
-          v-for="bubble in remoteData?.bubbles"
-          v-if="bubble?.enabled"
-          v-bind="bubble"
-        ></arpc-bubble>
+            <Transition name="arpc-settings-slide">
+              <arpc-bubble
+                v-if="app.cfg.connectivity.discord_rpc.enabled"
+                v-bind="ciderRpcBubble"
+              ></arpc-bubble
+            ></Transition>
+
+            <arpc-bubble
+              v-for="bubble in bubbles"
+              v-if="bubble?.enabled"
+              v-bind="bubble"
+              @sidebar-item="changeSidebarItem"
+              @set-modal="setModal"
+              @set-theme="unlockTheme"
+            ></arpc-bubble></div
+        ></Transition>
 
         <!-- General -->
         <div v-show="frontend.sidebar === 'general'">
           <!-- Play -->
-          <h2>General</h2>
+          <h2 @click="clickingEe('generalClickEe')">General</h2>
           <h3>Play</h3>
 
           <div
@@ -178,7 +207,7 @@
                     >
                       <option value="disabled">Off</option>
                       <option value="cover-static">Artwork</option>
-                      <option value="cover">Animated Artwork</option>
+                      <option value="cover">Animated artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -232,7 +261,7 @@
                     >
                       <option value="disabled">Off</option>
                       <option value="cover-static">Artwork</option>
-                      <option value="cover">Animated Artwork</option>
+                      <option value="cover">Animated artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -394,7 +423,7 @@
                     >
                       <option value="disabled">Off</option>
                       <option value="cover-static">Artwork</option>
-                      <option value="cover">Animated Artwork</option>
+                      <option value="cover">Animated artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -451,7 +480,7 @@
                     >
                       <option value="disabled">Off</option>
                       <option value="cover-static">Artwork</option>
-                      <option value="cover">Animated Artwork</option>
+                      <option value="cover">Animated artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -581,7 +610,7 @@
 
         <!-- Podcasts -->
         <div v-show="frontend.sidebar === 'podcasts'">
-          <h2>Podcasts</h2>
+          <h2 @click="clickingEe('podcastsClickEe')">Podcasts</h2>
           <h3>Play</h3>
 
           <div
@@ -695,7 +724,7 @@
                         v-model="settings.podcasts.play.largeImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Podcast Cover</option>
+                        <option value="cover">Podcast cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -754,7 +783,7 @@
                         v-model="settings.podcasts.play.smallImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Podcast Cover</option>
+                        <option value="cover">Podcast cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -964,7 +993,7 @@
                         v-model="settings.podcasts.pause.largeImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Podcast Cover</option>
+                        <option value="cover">Podcast cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -1023,7 +1052,7 @@
                         v-model="settings.podcasts.pause.smallImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Podcast Cover</option>
+                        <option value="cover">Podcast cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -1163,7 +1192,7 @@
 
         <!-- Videos -->
         <div v-show="frontend.sidebar === 'videos'">
-          <h2>Videos</h2>
+          <h2 @click="clickingEe('videosClickEe')">Videos</h2>
           <h3>Play</h3>
 
           <div
@@ -1742,7 +1771,7 @@
 
         <!-- Radio -->
         <div v-show="frontend.sidebar === 'radio'">
-          <h2>Radio Stations</h2>
+          <h2 @click="clickingEe('radioClickEe')">Radio Stations</h2>
 
           <div
             class="arpc-option-container"
@@ -1848,7 +1877,7 @@
                         v-model="settings.radio.largeImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Radio Cover</option>
+                        <option value="cover">Radio cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -1907,7 +1936,7 @@
                         v-model="settings.radio.smallImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Radio Cover</option>
+                        <option value="cover">Radio cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -2047,7 +2076,7 @@
 
         <!-- Settings -->
         <div v-show="frontend.sidebar === 'settings'">
-          <h2>Settings</h2>
+          <h2 @click="clickingEe('settingsClickEe')">Settings</h2>
 
           <div class="arpc-option-container">
             <div :disabled="app.cfg.connectivity.discord_rpc.enabled">
@@ -2055,7 +2084,12 @@
                 <div class="arpc-option-segment">Enable AdvancedRPC</div>
                 <div class="arpc-option-segment arpc-option-segment_auto">
                   <label>
-                    <input type="checkbox" v-model="settings.enabled" switch />
+                    <input
+                      @click="clickingEe('enableArpcSwitchEe')"
+                      type="checkbox"
+                      v-model="settings.enabled"
+                      switch
+                    />
                   </label>
                 </div>
               </div>
@@ -2083,13 +2117,8 @@
             <div class="arpc-option">
               <div class="arpc-option-segment">
                 Respect Private Session
-                <small v-if="settings.respectPrivateSession"
-                  >Your presence won't be displayed while Private Session is
-                  enabled.</small
-                >
-                <small v-else
-                  >Your presence will be displayed even while Private Session is
-                  enabled.</small
+                <small
+                  >Hides your presence while Private Session is enabled.</small
                 >
               </div>
               <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2187,8 +2216,35 @@
               </div>
             </div>
 
+            <div v-if="themes && themes.length > 0" class="arpc-option">
+              <div
+                class="arpc-option-segment"
+                :class="{ 'arpc-rumble' : remoteData?.themeClickEe?.id && !frontend[remoteData?.themeClickEe?.id + 'Theme'] }"
+                @click="clickingEe('themeClickEe')"
+              >
+                Theme
+                <small
+                  v-if="themes.find(t => t.id === frontend.theme)?.description"
+                >
+                  {{ themes.find(t => t.id === frontend.theme).description }}
+                </small>
+              </div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <label>
+                  <select class="arpc-select" v-model="frontend.theme">
+                    <option value="" disabled hidden>Select Theme</option>
+                    <option v-for="theme in themes" :value="theme.id">
+                      {{ theme.name }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
             <div class="arpc-option">
-              <div class="arpc-option-segment">Reset Settings to Default</div>
+              <div class="arpc-option-segment">
+                Reset Configuration to Default
+              </div>
               <div class="arpc-option-segment arpc-option-segment_auto">
                 <button
                   class="arpc-button arpc-button-red"
@@ -2382,34 +2438,56 @@
       installedVersion: AdvancedRpc.installedVersion,
       latestVersion: AdvancedRpc.latestVersion,
       unappliedSettings: AdvancedRpc.unappliedSettings,
-      versionInfo: "1.5.3 - December 17, 2022 10:50:24",
+      versionInfo: "1.5.4 - February 2, 2023 11:08:19",
       textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
       urlVariables: "{appleMusicUrl}, {ciderUrl}",
       variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
       modal: "",
       remoteData: AdvancedRpc.remoteData,
-      strings: {
-        disable_cider_rpc: `Please disable Cider's Discord Rich Presence in ${app.getLz("term.settings")} > ${app.getLz("settings.header.connectivity")} and restart the app.`,
-        private_session_enabled: "Private Session is currently enabled, your Discord presence won't be displayed."
+      privateSessionBubble: {
+        enabled: true,
+        message: "Private Session is currently enabled, your Discord presence won't be displayed.",
+        color: "#00AFF4",
+        icon: "info"
+      },
+      ciderRpcBubble: {
+        enabled: true,
+        message: `Please disable Cider's Discord Rich Presence in ${app.getLz("term.settings")} > ${app.getLz("settings.header.connectivity")} and restart the app.`,
+        color: "#FAA81A",
+        icon: "warning"
       },
       frontend: {
-        sidebar: "general"
-      }
+        sidebar: "general",
+        theme: "dark",
+        bubblesExpanded: true
+      },
+      themes: [],
+      bubbles: []
     }),
     watch: {
       settings: {
         handler() {
           AdvancedRpc.setSettings(this.settings);
           ipcRenderer.invoke(`plugin.${AdvancedRpc.PLUGIN_NAME}.setting`, this.settings);
+          this.initBubbles();
         },
         deep: true
       },
       frontend: {
         handler() {
           AdvancedRpc.setFrontendData(this.frontend);
+          this.setTheme(this.frontend.theme);
         },
         deep: true
       }
+    },
+    async created() {
+      this.settings = AdvancedRpc.getSettings();
+      let frontend = AdvancedRpc.getFrontendData();
+      if (typeof frontend["bubblesExpanded"] === "undefined") frontend["bubblesExpanded"] = true;
+      this.frontend = frontend;
+      this.setTheme(frontend.theme);
+      this.initBubbles();
     },
     async mounted() {
       ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.unappliedSettings`, (e, status) => {
@@ -2419,9 +2497,6 @@
       ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.setPrevSettings`, (e, settings) => {
         this.settings = settings;
       });
-      this.settings = AdvancedRpc.getSettings();
-      const frontend = AdvancedRpc.getFrontendData();
-      this.frontend = frontend;
     },
     methods: {
       async updateSettings() {
@@ -2451,12 +2526,81 @@
       toggleExpandable(key) {
         this.frontend.expandables[key] = !this.frontend.expandables[key];
       },
+      toggleBubbles() {
+        this.frontend.bubblesExpanded = !this.frontend.bubblesExpanded;
+      },
       changeSidebarItem(item) {
         this.frontend.sidebar = item;
         document.querySelector(".arpc-page").scrollIntoView();
       },
       openLink(url) {
         window.open(url, "_blank");
+      },
+      setTheme(theme) {
+        this.themes = this.remoteData?.themes;
+        this.themes = this.themes?.filter(t => {
+          if (t.requirement) {
+            return this.frontend[t.requirement];
+          } else {
+            return true;
+          }
+        });
+        if (this.remoteData?.forceTheme) {
+          document.querySelector(".advancedrpc")?.setAttribute("arpc-theme", this.remoteData.forceTheme);
+        } else if (this.themes?.find(t => t.id === theme)) {
+          document.querySelector(".advancedrpc")?.setAttribute("arpc-theme", theme);
+        } else {
+          document.querySelector(".advancedrpc")?.setAttribute("arpc-theme", "dark");
+          this.frontend.theme = "dark";
+        }
+      },
+      clickingEe(easterEgg) {
+        if (!this.remoteData?.[easterEgg] || this.frontend[this.remoteData?.[easterEgg].id + "Theme"]) return;
+        if (!this[this.remoteData?.[easterEgg].id + "Clicks"]) this[this.remoteData?.[easterEgg].id + "Clicks"] = 0;
+        this[this.remoteData?.[easterEgg].id + "Clicks"]++;
+        if (this[this.remoteData?.[easterEgg].id + "Clicks"] > this.remoteData?.[easterEgg]?.silentClicks && this[this.remoteData?.[easterEgg].id + "Clicks"] <= this.remoteData?.[easterEgg]?.clicks - 1) {
+          notyf.success({
+            message: this.remoteData?.[easterEgg]?.clickText.replace("{clicks}", this.remoteData[easterEgg].clicks - this[this.remoteData[easterEgg].id + "Clicks"]),
+            background: this.remoteData?.[easterEgg]?.color || "#d83c3e",
+            ripple: false,
+            icon: false
+          });
+        }
+        if (this[this.remoteData?.[easterEgg].id + "Clicks"] > this.remoteData?.[easterEgg]?.clicks - 1) {
+          this.unlockTheme(this.remoteData?.[easterEgg].id);
+          if (this.remoteData?.[easterEgg]?.unlockText) {
+            notyf.success({
+              message: this.remoteData?.[easterEgg].unlockText,
+              background: this.remoteData?.[easterEgg]?.color || "#d83c3e",
+              icon: false,
+              duration: 5000,
+              dismissible: true
+            });
+          }
+        }
+      },
+      unlockTheme(theme) {
+        this.frontend[theme + "Theme"] = true;
+        this.frontend.theme = theme;
+        this.setTheme(theme);
+      },
+      checkVersions(param) {
+        if (param.versions && !param.versions.includes(AdvancedRpc.installedVersion)) {
+          return false;
+        } else if (param.versionsSmallerThan && AdvancedRpc.installedVersion >= param.versionsSmallerThan) {
+          return false;
+        } else {
+          return true;
+        }
+      },
+      initBubbles() {
+        let bubbles = [];
+        this.remoteData?.bubbles?.forEach(bubble => {
+          if (this.checkVersions(bubble)) bubbles.push(bubble);
+        });
+        if (app.cfg.general.privateEnabled && this.settings.respectPrivateSession) bubbles.push(undefined);
+        if (app.cfg.connectivity.discord_rpc.enabled) bubbles.push(undefined);
+        this.bubbles = bubbles;
       }
     }
   });
@@ -2465,10 +2609,9 @@
     props: ["enabled", "message", "url", "icon", "color", "backgroundColor", "textColor", "iconColor", "versions", "versionsSmallerThan"],
     template: `
   <div
-  v-if="checkVersions()"
   class="arpc-bubble"
   :style="{'border-color': color, 'background': backgroundColor || color + '1a', 'cursor': url ? 'pointer' : 'default'}"
-  @click="url && redirectToLink(url)"
+  @click="url && doAction(url)"
 >
   <div v-if="icon" class="arpc-bubble-icon">
     <svg
@@ -2513,23 +2656,22 @@
       ></path>
     </svg>
   </div>
-  <div class="arpc-bubble-text" :style="{'color': textColor || '#fff'}">
+  <div class="arpc-bubble-text" :style="{'color': textColor || ''}">
     {{message}}
   </div>
 </div>
 
   `,
     methods: {
-      redirectToLink(url) {
-        window.open(url, "_blank");
-      },
-      checkVersions() {
-        if (this.versions && !this.versions.includes(AdvancedRpc.installedVersion)) {
-          return false;
-        } else if (this.versionsSmallerThan && AdvancedRpc.installedVersion >= this.versionsSmallerThan) {
-          return false;
+      doAction(item) {
+        if (item.startsWith("arpc.")) {
+          this.$emit("sidebar-item", item.replace("arpc.", ""));
+        } else if (item.startsWith("modal.")) {
+          this.$emit("set-modal", item.replace("modal.", ""));
+        } else if (item.startsWith("theme.")) {
+          this.$emit("set-theme", item.replace("theme.", ""));
         } else {
-          return true;
+          window.open(item, "_blank");
         }
       }
     }
@@ -2626,7 +2768,6 @@
   >
     <path
       fill="none"
-      stroke="#DCDDDE"
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"
@@ -2642,21 +2783,21 @@
 
   Vue.component("arpc-close-button", {
     template: `
-    <button @click="$emit('close')" class="arpc-close-button">
-      <svg
-        class="arpc-close-button"
-        aria-hidden="true"
-        role="img"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-      >
-        <path
-          fill="#DCDDDE"
-          d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"
-        ></path>
-      </svg>
-    </button>
+  <button @click="$emit('close')" class="arpc-close-button">
+  <svg
+    class="arpc-close-button"
+    aria-hidden="true"
+    role="img"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"
+    ></path>
+  </svg>
+</button>
+
   `
   });
 
@@ -2732,8 +2873,11 @@
   <div class="arpc-sidebar">
   <div>
     <div class="arpc-header">
-      <h1>AdvancedRPC</h1>
+      <h1 @click="$emit('click-ee', 'headerClickEe')">
+        {{ remoteData?.header ?? "AdvancedRPC" }}
+      </h1>
       <img
+        @click="$emit('click-ee', 'decorationClickEe')"
         v-if="remoteData?.titleDecorations?.rightImage"
         :src="remoteData?.titleDecorations?.rightImage"
         width="40"
@@ -2743,10 +2887,10 @@
     </div>
 
     <div
-      class="arpc-sidebar-item"
-      v-for="item in sidebarItems?.upper"
-      :class="{'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
-      @click="changeSidebarItem(item)"
+      v-for="item in sideBarItems?.upper"
+      v-if="checkVersions(item)"
+      :class="{'arpc-sidebar-item': item.id !== 'separator', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
+      @click="doAction(item)"
     >
       {{ item.dest === 'modal.changelog' && installedVersion < latestVersion ?
       item.updateText : item.text }}
@@ -2754,10 +2898,10 @@
   </div>
   <div>
     <div
-      class="arpc-sidebar-item"
-      v-for="item in sidebarItems?.lower"
-      :class="{'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
-      @click="changeSidebarItem(item)"
+      v-for="item in sideBarItems?.lower"
+      v-if="checkVersions(item)"
+      :class="{'arpc-sidebar-item': item.id !== 'separator', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
+      @click="doAction(item)"
     >
       {{ item.dest === 'modal.changelog' && installedVersion < latestVersion ?
       item.updateText : item.text }}
@@ -2772,12 +2916,12 @@
 `,
     props: ["installedVersion", "latestVersion", "versionInfo", "remoteData", "frontend"],
     data: () => ({
-      sidebarItems: null
+      sideBarItems: null
     }),
     created() {
-      this.sidebarItems = this.remoteData?.sidebarItems;
-      if (!this.sidebarItems) {
-        this.sidebarItems = {
+      this.sideBarItems = this.remoteData?.sideBarItems;
+      if (!this.sideBarItems) {
+        this.sideBarItems = {
           upper: [{
             text: "General",
             dest: "arpc.general",
@@ -2808,11 +2952,13 @@
       }
     },
     methods: {
-      changeSidebarItem(item) {
+      doAction(item) {
         if (item.dest.startsWith("arpc.")) {
           this.$emit("sidebar-item", item.id);
         } else if (item.dest.startsWith("modal.")) {
           this.$emit("set-modal", item.dest.replace("modal.", ""));
+        } else if (item.dest.startsWith("theme.")) {
+          this.$emit("set-theme", item.dest.replace("theme.", ""));
         } else {
           this.openLink(item.dest);
         }
@@ -2822,6 +2968,15 @@
       },
       openLink(url) {
         window.open(url, "_blank");
+      },
+      checkVersions(param) {
+        if (param.versions && !param.versions.includes(AdvancedRpc.installedVersion)) {
+          return false;
+        } else if (param.versionsSmallerThan && AdvancedRpc.installedVersion >= param.versionsSmallerThan) {
+          return false;
+        } else {
+          return true;
+        }
       }
     }
   });
@@ -2867,7 +3022,7 @@
     SETTINGS_KEY = "settings";
     FRONTEND_KEY = "frontend";
     remoteData = null;
-    installedVersion = "1.5.3";
+    installedVersion = "1.5.4";
     latestVersion = undefined;
     changelog = undefined;
     unappliedSettings = false;
@@ -3215,7 +3370,9 @@
         const data = localStorage.getItem(`plugin.${this.PLUGIN_NAME}.${this.FRONTEND_KEY}`);
         if (!data) {
           localStorage.setItem(`plugin.${this.PLUGIN_NAME}.${this.FRONTEND_KEY}`, JSON.stringify({
-            sidebar: "general"
+            sidebar: "general",
+            theme: "dark",
+            bubblesExpanded: true
           }));
           return this.getFrontendData();
         } else return JSON.parse(data);
