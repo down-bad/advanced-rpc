@@ -3,8 +3,11 @@ export default Vue.component("arpc-sidebar", {
   <div class="arpc-sidebar">
   <div>
     <div class="arpc-header">
-      <h1>AdvancedRPC</h1>
+      <h1 @click="$emit('click-ee', 'headerClickEe')">
+        {{ remoteData?.header ?? "AdvancedRPC" }}
+      </h1>
       <img
+        @click="$emit('click-ee', 'decorationClickEe')"
         v-if="remoteData?.titleDecorations?.rightImage"
         :src="remoteData?.titleDecorations?.rightImage"
         width="40"
@@ -14,10 +17,10 @@ export default Vue.component("arpc-sidebar", {
     </div>
 
     <div
-      class="arpc-sidebar-item"
-      v-for="item in sidebarItems?.upper"
-      :class="{'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
-      @click="changeSidebarItem(item)"
+      v-for="item in sideBarItems?.upper"
+      v-if="checkVersions(item)"
+      :class="{'arpc-sidebar-item': item.id !== 'separator', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
+      @click="doAction(item)"
     >
       {{ item.dest === 'modal.changelog' && installedVersion < latestVersion ?
       item.updateText : item.text }}
@@ -25,10 +28,10 @@ export default Vue.component("arpc-sidebar", {
   </div>
   <div>
     <div
-      class="arpc-sidebar-item"
-      v-for="item in sidebarItems?.lower"
-      :class="{'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
-      @click="changeSidebarItem(item)"
+      v-for="item in sideBarItems?.lower"
+      v-if="checkVersions(item)"
+      :class="{'arpc-sidebar-item': item.id !== 'separator', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
+      @click="doAction(item)"
     >
       {{ item.dest === 'modal.changelog' && installedVersion < latestVersion ?
       item.updateText : item.text }}
@@ -49,13 +52,13 @@ export default Vue.component("arpc-sidebar", {
     "frontend",
   ],
   data: () => ({
-    sidebarItems: null,
+    sideBarItems: null,
   }),
   created() {
-    this.sidebarItems = this.remoteData?.sidebarItems;
+    this.sideBarItems = this.remoteData?.sideBarItems;
 
-    if (!this.sidebarItems) {
-      this.sidebarItems = {
+    if (!this.sideBarItems) {
+      this.sideBarItems = {
         upper: [
           {
             text: "General",
@@ -94,11 +97,13 @@ export default Vue.component("arpc-sidebar", {
     }
   },
   methods: {
-    changeSidebarItem(item) {
+    doAction(item) {
       if (item.dest.startsWith("arpc.")) {
         this.$emit("sidebar-item", item.id);
       } else if (item.dest.startsWith("modal.")) {
         this.$emit("set-modal", item.dest.replace("modal.", ""));
+      } else if (item.dest.startsWith("theme.")) {
+        this.$emit("set-theme", item.dest.replace("theme.", ""));
       } else {
         this.openLink(item.dest);
       }
@@ -108,6 +113,21 @@ export default Vue.component("arpc-sidebar", {
     },
     openLink(url) {
       window.open(url, "_blank");
+    },
+    checkVersions(param) {
+      if (
+        param.versions &&
+        !param.versions.includes(AdvancedRpc.installedVersion)
+      ) {
+        return false;
+      } else if (
+        param.versionsSmallerThan &&
+        AdvancedRpc.installedVersion >= param.versionsSmallerThan
+      ) {
+        return false;
+      } else {
+        return true;
+      }
     },
   },
 });

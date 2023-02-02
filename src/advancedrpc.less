@@ -1,3 +1,6 @@
+@import (less)
+  "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/colors.less";
+
 @font-face {
   font-family: "Whitney";
   font-style: normal;
@@ -59,6 +62,71 @@
   src: url("./fonts/ggsans-bold.ttf") format("opentype");
 }
 
+:root {
+  --arpc-background: #36393f;
+  --arpc-secondary: #2f3136;
+  --arpc-text-primary: #fff;
+  --arpc-text-secondary: #b9bbbe;
+  --arpc-dark: #202225;
+  --arpc-text-input: #dcddde;
+  --arpc-divider: #42464d;
+  --arpc-link: #00aff4;
+  --arpc-header: #fff;
+
+  --arpc-modal-header: #fff;
+  --arpc-modal-background: #36393f;
+  --arpc-modal-secondary: #2f3136;
+  --arpc-modal-text: #dcddde;
+  --arpc-changelog: #b9bbbe;
+  --arpc-changelog-divider: #46c46e;
+  --arpc-modal-variable: #202225;
+  --arpc-modal-backdrop: #000000d9;
+
+  --arpc-sidebar-item-text: #b9bbbe;
+  --arpc-sidebar-item-hover: #3c3f45;
+  --arpc-sidebar-item-hover-text: #dcddde;
+  --arpc-sidebar-item-active: #3f4248;
+  --arpc-sidebar-selected: #42464d;
+  --arpc-sidebar-selected-text: #fff;
+  --arpc-sidebar-separator: #3f4248;
+
+  --arpc-sidebar-blue: #5865f2;
+  --arpc-sidebar-blue-text: #fff;
+  --arpc-sidebar-blue-hover: #4752c4;
+  --arpc-sidebar-blue-hover-text: #fff;
+  --arpc-sidebar-blue-active: #3c45a5;
+  --arpc-sidebar-blue-active-text: #fff;
+
+  --arpc-switch-unchecked: #72767d;
+  --arpc-switch-unchecked-active: #61808a;
+  --arpc-switch-checked: #3ba55d;
+  --arpc-switch-checked-active: #4b9a83;
+  --arpc-switch-handle-unchecked: #fff;
+  --arpc-switch-handle-checked: #fff;
+
+  --arpc-button-underline: #dcddde;
+  --arpc-button-blue: #5865f2;
+  --arpc-button-blue-text: #fff;
+  --arpc-button-blue-hover: #4752c4;
+  --arpc-button-blue-hover-text: #fff;
+  --arpc-button-blue-active: #3c45a5;
+  --arpc-button-blue-active-text: #fff;
+
+  --arpc-button-green: #2d7d46;
+  --arpc-button-green-text: #fff;
+  --arpc-button-green-hover: #215b32;
+  --arpc-button-green-hover-text: #fff;
+  --arpc-button-green-active: #1e532e;
+  --arpc-button-green-active-text: #fff;
+
+  --arpc-button-red: #d83c3e;
+  --arpc-button-red-text: #fff;
+  --arpc-button-red-hover: #a12d2f;
+  --arpc-button-red-hover-text: #fff;
+  --arpc-button-red-active: #8c2729;
+  --arpc-button-red-active-text: #fff;
+}
+
 .advancedrpc {
   * {
     font-family: "gg sans", "Whitney", "Helvetica Neue", Helvetica, Arial,
@@ -66,7 +134,7 @@
   }
 
   a {
-    color: #00aff4;
+    color: var(--arpc-link);
     text-decoration: none;
   }
 
@@ -80,28 +148,28 @@
     width: 40px;
     height: 24px;
     border-radius: 14px;
-    background: #72767d;
+    background: var(--arpc-switch-unchecked) !important;
     display: block;
   }
 
   input[type="checkbox"][switch]:active {
-    background: #61808a;
+    background: var(--arpc-switch-unchecked-active) !important;
   }
 
   input[type="checkbox"][switch]:checked {
-    background: #3ba55d;
+    background: var(--arpc-switch-checked) !important;
   }
 
   input[type="checkbox"][switch]:checked:active {
-    background: #4b9a83;
+    background: var(--arpc-switch-checked-active) !important;
   }
 
   input[type="checkbox"][switch]::before,
   input[type="checkbox"][switch]:checked::before {
     top: 0px !important;
-    background: #fff;
+    background: var(--arpc-switch-handle-unchecked) !important;
     width: 25px;
-    height: 25px;
+    height: 24px;
   }
 
   input[type="checkbox"][switch]::before {
@@ -110,7 +178,7 @@
 
   input[type="checkbox"][switch]:checked::before {
     left: 14px;
-    background: #fff;
+    background: var(--arpc-switch-handle-checked) !important;
   }
 
   input[type="text"],
@@ -125,9 +193,9 @@
     font-size: 16px;
     box-sizing: border-box;
     border-radius: 3px !important;
-    color: #dcddde;
+    color: var(--arpc-text-input);
     background: initial !important;
-    background-color: #202225 !important;
+    background-color: var(--arpc-dark) !important;
     box-shadow: none !important;
     border: none !important;
     transition: border-color 0.2s ease-in-out;
@@ -135,7 +203,7 @@
 }
 
 .arpc-page {
-  background-color: #36393f;
+  background-color: var(--arpc-background);
   position: absolute;
   top: 0;
   left: 0;
@@ -156,7 +224,7 @@
   h1,
   h2,
   h3 {
-    color: #fff;
+    color: var(--arpc-text-primary);
   }
 
   h1 {
@@ -182,7 +250,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    color: #a3a6aa;
+    color: var(--arpc-text-secondary);
     font-size: 12px;
     font-weight: 400;
     margin-top: 80px;
@@ -195,7 +263,7 @@
   position: fixed;
   z-index: 1;
   top: 0;
-  background-color: #2f3136;
+  background-color: var(--arpc-secondary);
   overflow-x: hidden;
   padding-top: calc(var(--chromeHeight1) + 15px);
   padding-left: 4px;
@@ -216,7 +284,7 @@
   }
 
   .arpc-sidebar-item {
-    color: #b9bbbe;
+    color: var(--arpc-sidebar-item-text);
     padding: 6px 10px;
     margin-bottom: 2px;
     border-radius: 4px;
@@ -232,34 +300,34 @@
   }
 
   .arpc-sidebar-item:hover {
-    background-color: #3c3f45;
-    color: #dcddde;
+    background-color: var(--arpc-sidebar-item-hover);
+    color: var(--arpc-sidebar-item-hover-text);
   }
 
   .arpc-sidebar-item:active {
-    background-color: #3f4248;
-    color: #fff;
+    background-color: var(--arpc-sidebar-item-active);
+    color: var(--arpc-sidebar-selected-text);
   }
 
   .arpc-sidebar-selected {
-    background-color: #42464d;
-    color: #fff;
+    background-color: var(--arpc-sidebar-selected);
+    color: var(--arpc-sidebar-selected-text);
     cursor: default;
   }
 
   .arpc-sidebar-selected:hover {
-    background-color: #3c3f45;
-    color: #fff;
+    background-color: var(--arpc-sidebar-item-hover);
+    color: var(--arpc-sidebar-selected-text);
   }
 
   .arpc-sidebar-selected:active {
-    background-color: #3f4248;
-    color: #fff;
+    background-color: var(--arpc-sidebar-item-active);
+    color: var(--arpc-sidebar-selected-text);
   }
 
   .arpc-sidebar-blue {
-    background-color: #5865f2;
-    color: #fff;
+    background-color: var(--arpc-sidebar-blue);
+    color: var(--arpc-sidebar-blue-text);
     display: flex;
     justify-content: space-between;
 
@@ -269,23 +337,29 @@
   }
 
   .arpc-sidebar-blue:hover {
-    background-color: #4752c4;
-    color: #fff;
+    background-color: var(--arpc-sidebar-blue-hover);
+    color: var(--arpc-sidebar-blue-hover-text);
   }
 
   .arpc-sidebar-blue:active {
-    background-color: #3c45a5;
-    color: #fff;
+    background-color: var(--arpc-sidebar-blue-active);
+    color: var(--arpc-sidebar-blue-active-text);
+  }
+
+  .arpc-sidebar-separator {
+    background-color: var(--arpc-sidebar-separator);
+    margin: 8px 7px;
+    height: 1px;
   }
 
   footer {
     margin-left: 5px;
     margin-top: 10px;
-    opacity: 15%;
+    opacity: 25%;
   }
 
   footer:hover {
-    opacity: 35%;
+    opacity: 45%;
     cursor: pointer;
   }
 }
@@ -303,7 +377,8 @@
 }
 
 .arpc-unapplied-settings-content {
-  background-color: #202225;
+  background-color: var(--arpc-dark);
+  color: var(--arpc-text-input);
   font-weight: 500;
   display: flex;
   justify-content: space-between;
@@ -329,6 +404,7 @@
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: 20px;
+  color: var(--arpc-header);
 
   img {
     margin-right: 5px;
@@ -366,7 +442,7 @@
 }
 
 .arpc-option {
-  color: #fff;
+  color: var(--arpc-text-primary);
   line-height: 24px;
   font-size: 16px;
   font-weight: 500;
@@ -379,7 +455,7 @@
   small {
     margin-top: 8px;
     margin-right: 30px;
-    color: #b9bbbe;
+    color: var(--arpc-text-secondary);
     font-size: 14px;
     line-height: 20px;
     font-weight: 400;
@@ -409,7 +485,7 @@
   overflow: hidden;
 
   .arpc-option {
-    border-bottom: 1px solid rgba(79, 84, 92, 0.48);
+    border-bottom: 1px solid var(--arpc-divider);
   }
 }
 
@@ -433,6 +509,26 @@
   margin-bottom: 5px;
 }
 
+.arpc-bubbles-bar {
+  display: flex;
+  justify-content: space-between;
+  color: var(--arpc-text-secondary);
+  font-weight: 500;
+  font-size: 14px;
+  align-items: center;
+  margin-bottom: 10px;
+
+  .arpc-bubbles-count {
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  .arpc-expand-button {
+    path {
+      stroke: var(--arpc-text-secondary);
+    }
+  }
+}
+
 .arpc-bubble {
   font-size: 16px;
   line-height: 20px;
@@ -450,6 +546,7 @@
   .arpc-bubble-text {
     flex: 1;
     align-self: center;
+    color: var(--arpc-text-input);
   }
 
   .arpc-bubble-icon {
@@ -475,8 +572,8 @@
   height: 40px;
   padding: 6px;
   background: initial;
-  background-color: #202225;
-  color: #dcddde;
+  background-color: var(--arpc-dark);
+  color: var(--arpc-text-input);
   font-family: inherit;
   font-weight: 500;
   border: 1px solid transparent;
@@ -494,7 +591,6 @@
   justify-content: center;
   align-items: center;
   box-sizing: border-box;
-  color: #fff;
   background: none;
   border: none;
   border-radius: 3px;
@@ -510,49 +606,63 @@
   transition: background-color 0.17s ease, color 0.17s ease;
 }
 
+.arpc-button-underline {
+  color: var(--arpc-text-input);
+}
+
 .arpc-button-underline:hover {
   text-decoration: underline;
 }
 
 .arpc-button-blue {
-  background-color: #5865f2;
+  background-color: var(--arpc-button-blue);
+  color: var(--arpc-button-blue-text);
 }
 
 .arpc-button-blue:hover {
-  background-color: #4752c4;
+  background-color: var(--arpc-button-blue-hover);
+  color: var(--arpc-button-blue-hover-text);
 }
 
 .arpc-button-blue:active {
-  background-color: #3c45a5;
+  background-color: var(--arpc-button-blue-active);
+  color: var(--arpc-button-blue-active-text);
 }
 
 .arpc-button-green {
-  background-color: #2d7d46;
+  background-color: var(--arpc-button-green);
+  color: var(--arpc-button-green-text);
 }
 
 .arpc-button-green:hover {
-  background-color: #215b32;
+  background-color: var(--arpc-button-green-hover);
+  color: var(--arpc-button-green-hover-text);
 }
 
 .arpc-button-green:active {
-  background-color: #1e532e;
+  background-color: var(--arpc-button-green-active);
+  color: var(--arpc-button-green-active-text);
 }
 
 .arpc-button-red {
-  background-color: #d83c3e;
+  background-color: var(--arpc-button-red);
+  color: var(--arpc-button-red-text);
 }
 
 .arpc-button-red:hover {
-  background-color: #a12d2f;
+  background-color: var(--arpc-button-red-hover);
+  color: var(--arpc-button-red-hover-text);
 }
 
 .arpc-button-red:active {
-  background-color: #8c2729;
+  background-color: var(--arpc-button-red-active);
+  color: var(--arpc-button-red-active-text);
 }
 
 .arpc-var-button {
-  background-color: #292b2f;
-  color: #b9bbbe;
+  background-color: var(--arpc-dark);
+  color: var(--arpc-text-input);
+  font-weight: 400;
   min-width: 0;
   min-height: 0;
   padding: 4px;
@@ -563,7 +673,7 @@
 // Modals
 
 .arpc-modal-backdrop {
-  background: rgb(0 0 0 / 85%);
+  background: var(--arpc-modal-backdrop);
   position: fixed;
   top: 0;
   left: 0;
@@ -596,9 +706,10 @@
     font-size: 13px;
     word-wrap: break-word;
     margin: 0 auto;
-    background-color: #36393f;
+    background-color: var(--arpc-modal-background);
 
     .arpc-modal-header {
+      color: var(--arpc-modal-header);
       padding: 16px;
       display: flex;
       align-items: center;
@@ -610,7 +721,7 @@
 
     .arpc-modal-content {
       font-size: 16px;
-      color: #dcddde;
+      color: var(--arpc-modal-text);
       line-height: 20px;
       position: relative;
       border-radius: 5px 5px 0 0;
@@ -643,7 +754,7 @@
 
       #arpc-variables div {
         user-select: text;
-        background-color: #292b2f;
+        background-color: var(--arpc-modal-variable);
         border-radius: 4px;
         margin-right: 5px;
         margin-bottom: 5px;
@@ -655,7 +766,8 @@
       position: relative;
       padding: 13px;
       border-radius: 0 0 5px 5px;
-      background-color: #2f3136;
+      background-color: var(--arpc-modal-secondary);
+      color: var(--arpc-modal-text);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -676,21 +788,19 @@
     min-height: 200px;
 
     .arpc-modal-content {
-      user-select: text;
-      color: #b9bbbe;
+      color: var(--arpc-changelog);
 
       .arpc-changelog-divider {
-        color: #46c46e;
+        color: var(--arpc-changelog-divider);
         margin: 10px 0;
         font-weight: 600;
         display: flex;
         align-items: center;
-        user-select: none;
         font-weight: 700;
       }
 
       .arpc-changelog-divider:after {
-        background-color: #46c46e;
+        background-color: var(--arpc-changelog-divider);
         content: "";
         height: 1px;
         flex: 1 1 auto;
@@ -711,6 +821,10 @@
   opacity: 0.6;
   transition: opacity 0.2s ease-in-out;
   cursor: pointer;
+
+  path {
+    fill: var(--arpc-modal-text);
+  }
 }
 
 .arpc-close-button:hover {
@@ -720,6 +834,10 @@
 .arpc-expand-button {
   display: block;
   transition: transform 0.2s ease-in-out;
+}
+
+[arpc-theme="dark"] .arpc-modal-footer .arpc-button-underline {
+  color: var(--arpc-text-primary);
 }
 
 .arpc-expandable {
@@ -832,5 +950,45 @@
   100% {
     opacity: 0;
     transform: scale(0.9);
+  }
+}
+
+.arpc-rumble:active {
+  animation: rumble-fast 0.1s;
+}
+
+@keyframes rumble-fast {
+  0% {
+    transform: translate(0, 0);
+  }
+  10% {
+    transform: translate(2px, 2px);
+  }
+  20% {
+    transform: translate(-2px, -2px);
+  }
+  30% {
+    transform: translate(2px, 2px);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+  }
+  50% {
+    transform: translate(2px, 2px);
+  }
+  60% {
+    transform: translate(-2px, -2px);
+  }
+  70% {
+    transform: translate(2px, 2px);
+  }
+  80% {
+    transform: translate(-2px, -2px);
+  }
+  90% {
+    transform: translate(2px, 2px);
+  }
+  100% {
+    transform: translate(0, 0);
   }
 }

@@ -8,7 +8,7 @@
       "versions": ["1.5.0"]
     }
   ],
-  "sidebarItems": {
+  "sideBarItems": {
     "upper": [
       {
         "text": "General",
@@ -31,6 +31,9 @@
         "id": "videos"
       },
       {
+        "id": "separator"
+      },
+      {
         "text": "Settings",
         "dest": "arpc.settings",
         "id": "settings"
@@ -51,6 +54,55 @@
         "dest": "modal.changelog"
       }
     ]
+  },
+  "themes": [
+    {
+      "id": "light",
+      "name": "Light"
+    },
+    {
+      "id": "dark",
+      "name": "Dark"
+    },
+    {
+      "id": "black",
+      "name": "Black"
+    },
+    {
+      "id": "purple",
+      "name": "Purple",
+      "requirement": "purpleTheme"
+    },
+    {
+      "id": "redblue",
+      "name": "AdvancedRPC",
+      "requirement": "redblueTheme"
+    }
+  ],
+  "UNUSED-themeClickEe": {
+    "id": "black",
+    "silentClicks": 3,
+    "clicks": 9,
+    "clickText": "You hear a rumble! Knock {clicks} more times...",
+    "unlockText": "Brave one, the path to darkness opens!",
+    "color": "#111315"
+  },
+  "themeClickEe": {
+    "id": "redblue",
+    "silentClicks": 9,
+    "clicks": 9
+  },
+  "unappliedTextEe": {
+    "id": "purple",
+    "silentClicks": 9,
+    "clicks": 9
+  },
+  "UNUSED-enableArpcSwitchEe": {
+    "id": "redblue",
+    "silentClicks": 3,
+    "clicks": 9,
+    "clickText": "Who knows, if you do that {clicks} more times maybe something will happen...",
+    "color": "#1d2537"
   },
   "animatedArtworks": true,
   "icloudArtworks": false

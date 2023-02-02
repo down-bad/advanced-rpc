@@ -15,7 +15,6 @@ export default Vue.component("arpc-expand-button", {
   >
     <path
       fill="none"
-      stroke="#DCDDDE"
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"

@@ -32,7 +32,10 @@ export default Vue.component("plugin.advancedrpc", {
           <div v-if="settings.applySettings === 'state'">
             Your changes will apply on playback state change. Apply now?
           </div>
-          <div v-else-if="settings.applySettings === 'manually'">
+          <div
+            @click="clickingEe('unappliedTextEe')"
+            v-else-if="settings.applySettings === 'manually'"
+          >
             You've made changes, apply them to update your Discord presence.
           </div>
           <div v-else>;)</div>
@@ -63,33 +66,59 @@ export default Vue.component("plugin.advancedrpc", {
         :frontend="frontend"
         @sidebar-item="changeSidebarItem"
         @set-modal="setModal"
+        @set-theme="unlockTheme"
+        @click-ee="clickingEe"
       ></arpc-sidebar>
 
       <div class="arpc-content">
-        <arpc-bubble
-          v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
-          :message="strings.private_session_enabled"
-          icon="info"
-          color="#00aff4"
-        ></arpc-bubble>
+        <Transition name="arpc-settings-slide">
+          <div
+            class="arpc-bubbles-bar arpc-expandable"
+            @click="toggleBubbles()"
+            v-if="bubbles.length > 0 || ($root.cfg.general.privateEnabled && settings.respectPrivateSession) || app.cfg.connectivity.discord_rpc.enabled"
+          >
+            <div
+              class="arpc-bubbles-count"
+              :style="{'opacity': frontend.bubblesExpanded ? 0 : 1}"
+            >
+              <div v-if="bubbles.length === 1">{{ bubbles.length }} notice</div>
+              <div v-else>{{ bubbles.length }} notices</div>
+            </div>
+            <arpc-expand-button
+              :expanded="frontend.bubblesExpanded"
+            ></arpc-expand-button></div
+        ></Transition>
 
-        <arpc-bubble
-          v-if="app.cfg.connectivity.discord_rpc.enabled"
-          :message="strings.disable_cider_rpc"
-          icon="warning"
-          color="#faa81a"
-        ></arpc-bubble>
+        <Transition name="arpc-settings-slide">
+          <div v-show="frontend.bubblesExpanded">
+            <Transition name="arpc-settings-slide">
+              <arpc-bubble
+                v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
+                v-bind="privateSessionBubble"
+              ></arpc-bubble
+            ></Transition>
 
-        <arpc-bubble
-          v-for="bubble in remoteData?.bubbles"
-          v-if="bubble?.enabled"
-          v-bind="bubble"
-        ></arpc-bubble>
+            <Transition name="arpc-settings-slide">
+              <arpc-bubble
+                v-if="app.cfg.connectivity.discord_rpc.enabled"
+                v-bind="ciderRpcBubble"
+              ></arpc-bubble
+            ></Transition>
+
+            <arpc-bubble
+              v-for="bubble in bubbles"
+              v-if="bubble?.enabled"
+              v-bind="bubble"
+              @sidebar-item="changeSidebarItem"
+              @set-modal="setModal"
+              @set-theme="unlockTheme"
+            ></arpc-bubble></div
+        ></Transition>
 
         <!-- General -->
         <div v-show="frontend.sidebar === 'general'">
           <!-- Play -->
-          <h2>General</h2>
+          <h2 @click="clickingEe('generalClickEe')">General</h2>
           <h3>Play</h3>
 
           <div
@@ -174,7 +203,7 @@ export default Vue.component("plugin.advancedrpc", {
                     >
                       <option value="disabled">Off</option>
                       <option value="cover-static">Artwork</option>
-                      <option value="cover">Animated Artwork</option>
+                      <option value="cover">Animated artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -228,7 +257,7 @@ export default Vue.component("plugin.advancedrpc", {
                     >
                       <option value="disabled">Off</option>
                       <option value="cover-static">Artwork</option>
-                      <option value="cover">Animated Artwork</option>
+                      <option value="cover">Animated artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -390,7 +419,7 @@ export default Vue.component("plugin.advancedrpc", {
                     >
                       <option value="disabled">Off</option>
                       <option value="cover-static">Artwork</option>
-                      <option value="cover">Animated Artwork</option>
+                      <option value="cover">Animated artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -447,7 +476,7 @@ export default Vue.component("plugin.advancedrpc", {
                     >
                       <option value="disabled">Off</option>
                       <option value="cover-static">Artwork</option>
-                      <option value="cover">Animated Artwork</option>
+                      <option value="cover">Animated artwork</option>
                       <option value="custom">Custom</option>
                     </select>
                   </label>
@@ -577,7 +606,7 @@ export default Vue.component("plugin.advancedrpc", {
 
         <!-- Podcasts -->
         <div v-show="frontend.sidebar === 'podcasts'">
-          <h2>Podcasts</h2>
+          <h2 @click="clickingEe('podcastsClickEe')">Podcasts</h2>
           <h3>Play</h3>
 
           <div
@@ -691,7 +720,7 @@ export default Vue.component("plugin.advancedrpc", {
                         v-model="settings.podcasts.play.largeImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Podcast Cover</option>
+                        <option value="cover">Podcast cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -750,7 +779,7 @@ export default Vue.component("plugin.advancedrpc", {
                         v-model="settings.podcasts.play.smallImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Podcast Cover</option>
+                        <option value="cover">Podcast cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -960,7 +989,7 @@ export default Vue.component("plugin.advancedrpc", {
                         v-model="settings.podcasts.pause.largeImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Podcast Cover</option>
+                        <option value="cover">Podcast cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -1019,7 +1048,7 @@ export default Vue.component("plugin.advancedrpc", {
                         v-model="settings.podcasts.pause.smallImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Podcast Cover</option>
+                        <option value="cover">Podcast cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -1159,7 +1188,7 @@ export default Vue.component("plugin.advancedrpc", {
 
         <!-- Videos -->
         <div v-show="frontend.sidebar === 'videos'">
-          <h2>Videos</h2>
+          <h2 @click="clickingEe('videosClickEe')">Videos</h2>
           <h3>Play</h3>
 
           <div
@@ -1738,7 +1767,7 @@ export default Vue.component("plugin.advancedrpc", {
 
         <!-- Radio -->
         <div v-show="frontend.sidebar === 'radio'">
-          <h2>Radio Stations</h2>
+          <h2 @click="clickingEe('radioClickEe')">Radio Stations</h2>
 
           <div
             class="arpc-option-container"
@@ -1844,7 +1873,7 @@ export default Vue.component("plugin.advancedrpc", {
                         v-model="settings.radio.largeImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Radio Cover</option>
+                        <option value="cover">Radio cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -1903,7 +1932,7 @@ export default Vue.component("plugin.advancedrpc", {
                         v-model="settings.radio.smallImage"
                       >
                         <option value="disabled">Off</option>
-                        <option value="cover">Radio Cover</option>
+                        <option value="cover">Radio cover</option>
                         <option value="custom">Custom</option>
                       </select>
                     </label>
@@ -2043,7 +2072,7 @@ export default Vue.component("plugin.advancedrpc", {
 
         <!-- Settings -->
         <div v-show="frontend.sidebar === 'settings'">
-          <h2>Settings</h2>
+          <h2 @click="clickingEe('settingsClickEe')">Settings</h2>
 
           <div class="arpc-option-container">
             <div :disabled="app.cfg.connectivity.discord_rpc.enabled">
@@ -2051,7 +2080,12 @@ export default Vue.component("plugin.advancedrpc", {
                 <div class="arpc-option-segment">Enable AdvancedRPC</div>
                 <div class="arpc-option-segment arpc-option-segment_auto">
                   <label>
-                    <input type="checkbox" v-model="settings.enabled" switch />
+                    <input
+                      @click="clickingEe('enableArpcSwitchEe')"
+                      type="checkbox"
+                      v-model="settings.enabled"
+                      switch
+                    />
                   </label>
                 </div>
               </div>
@@ -2079,13 +2113,8 @@ export default Vue.component("plugin.advancedrpc", {
             <div class="arpc-option">
               <div class="arpc-option-segment">
                 Respect Private Session
-                <small v-if="settings.respectPrivateSession"
-                  >Your presence won't be displayed while Private Session is
-                  enabled.</small
-                >
-                <small v-else
-                  >Your presence will be displayed even while Private Session is
-                  enabled.</small
+                <small
+                  >Hides your presence while Private Session is enabled.</small
                 >
               </div>
               <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2183,8 +2212,35 @@ export default Vue.component("plugin.advancedrpc", {
               </div>
             </div>
 
+            <div v-if="themes && themes.length > 0" class="arpc-option">
+              <div
+                class="arpc-option-segment"
+                :class="{ 'arpc-rumble' : remoteData?.themeClickEe?.id && !frontend[remoteData?.themeClickEe?.id + 'Theme'] }"
+                @click="clickingEe('themeClickEe')"
+              >
+                Theme
+                <small
+                  v-if="themes.find(t => t.id === frontend.theme)?.description"
+                >
+                  {{ themes.find(t => t.id === frontend.theme).description }}
+                </small>
+              </div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <label>
+                  <select class="arpc-select" v-model="frontend.theme">
+                    <option value="" disabled hidden>Select Theme</option>
+                    <option v-for="theme in themes" :value="theme.id">
+                      {{ theme.name }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
             <div class="arpc-option">
-              <div class="arpc-option-segment">Reset Settings to Default</div>
+              <div class="arpc-option-segment">
+                Reset Configuration to Default
+              </div>
               <div class="arpc-option-segment arpc-option-segment_auto">
                 <button
                   class="arpc-button arpc-button-red"
@@ -2384,16 +2440,28 @@ export default Vue.component("plugin.advancedrpc", {
     variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
     modal: "",
     remoteData: AdvancedRpc.remoteData,
-    strings: {
-      disable_cider_rpc: `Please disable Cider's Discord Rich Presence in ${app.getLz(
+    privateSessionBubble: {
+      enabled: true,
+      message:
+        "Private Session is currently enabled, your Discord presence won't be displayed.",
+      color: "#00AFF4",
+      icon: "info",
+    },
+    ciderRpcBubble: {
+      enabled: true,
+      message: `Please disable Cider's Discord Rich Presence in ${app.getLz(
         "term.settings"
       )} > ${app.getLz("settings.header.connectivity")} and restart the app.`,
-      private_session_enabled:
-        "Private Session is currently enabled, your Discord presence won't be displayed.",
+      color: "#FAA81A",
+      icon: "warning",
     },
     frontend: {
       sidebar: "general",
+      theme: "dark",
+      bubblesExpanded: true,
     },
+    themes: [],
+    bubbles: [],
   }),
   watch: {
     settings: {
@@ -2403,15 +2471,28 @@ export default Vue.component("plugin.advancedrpc", {
           `plugin.${AdvancedRpc.PLUGIN_NAME}.setting`,
           this.settings
         );
+        this.initBubbles();
       },
       deep: true,
     },
     frontend: {
       handler() {
         AdvancedRpc.setFrontendData(this.frontend);
+        this.setTheme(this.frontend.theme);
       },
       deep: true,
     },
+  },
+  async created() {
+    this.settings = AdvancedRpc.getSettings();
+
+    let frontend = AdvancedRpc.getFrontendData();
+    if (typeof frontend["bubblesExpanded"] === "undefined")
+      frontend["bubblesExpanded"] = true;
+    this.frontend = frontend;
+
+    this.setTheme(frontend.theme);
+    this.initBubbles();
   },
   async mounted() {
     ipcRenderer.on(
@@ -2428,11 +2509,6 @@ export default Vue.component("plugin.advancedrpc", {
         this.settings = settings;
       }
     );
-
-    this.settings = AdvancedRpc.getSettings();
-
-    const frontend = AdvancedRpc.getFrontendData();
-    this.frontend = frontend;
   },
   methods: {
     async updateSettings() {
@@ -2471,12 +2547,122 @@ export default Vue.component("plugin.advancedrpc", {
     toggleExpandable(key) {
       this.frontend.expandables[key] = !this.frontend.expandables[key];
     },
+    toggleBubbles() {
+      this.frontend.bubblesExpanded = !this.frontend.bubblesExpanded;
+    },
     changeSidebarItem(item) {
       this.frontend.sidebar = item;
       document.querySelector(".arpc-page").scrollIntoView();
     },
     openLink(url) {
       window.open(url, "_blank");
+    },
+    setTheme(theme) {
+      this.themes = this.remoteData?.themes;
+
+      this.themes = this.themes?.filter((t) => {
+        if (t.requirement) {
+          return this.frontend[t.requirement];
+        } else {
+          return true;
+        }
+      });
+
+      if (this.remoteData?.forceTheme) {
+        document
+          .querySelector(".advancedrpc")
+          ?.setAttribute("arpc-theme", this.remoteData.forceTheme);
+      } else if (this.themes?.find((t) => t.id === theme)) {
+        document
+          .querySelector(".advancedrpc")
+          ?.setAttribute("arpc-theme", theme);
+      } else {
+        document
+          .querySelector(".advancedrpc")
+          ?.setAttribute("arpc-theme", "dark");
+
+        this.frontend.theme = "dark";
+      }
+    },
+    clickingEe(easterEgg) {
+      if (
+        !this.remoteData?.[easterEgg] ||
+        this.frontend[this.remoteData?.[easterEgg].id + "Theme"]
+      )
+        return;
+
+      if (!this[this.remoteData?.[easterEgg].id + "Clicks"])
+        this[this.remoteData?.[easterEgg].id + "Clicks"] = 0;
+
+      this[this.remoteData?.[easterEgg].id + "Clicks"]++;
+
+      if (
+        this[this.remoteData?.[easterEgg].id + "Clicks"] >
+          this.remoteData?.[easterEgg]?.silentClicks &&
+        this[this.remoteData?.[easterEgg].id + "Clicks"] <=
+          this.remoteData?.[easterEgg]?.clicks - 1
+      ) {
+        notyf.success({
+          message: this.remoteData?.[easterEgg]?.clickText.replace(
+            "{clicks}",
+            this.remoteData[easterEgg].clicks -
+              this[this.remoteData[easterEgg].id + "Clicks"]
+          ),
+          background: this.remoteData?.[easterEgg]?.color || "#d83c3e",
+          ripple: false,
+          icon: false,
+        });
+      }
+
+      if (
+        this[this.remoteData?.[easterEgg].id + "Clicks"] >
+        this.remoteData?.[easterEgg]?.clicks - 1
+      ) {
+        this.unlockTheme(this.remoteData?.[easterEgg].id);
+
+        if (this.remoteData?.[easterEgg]?.unlockText) {
+          notyf.success({
+            message: this.remoteData?.[easterEgg].unlockText,
+            background: this.remoteData?.[easterEgg]?.color || "#d83c3e",
+            icon: false,
+            duration: 5000,
+            dismissible: true,
+          });
+        }
+      }
+    },
+    unlockTheme(theme) {
+      this.frontend[theme + "Theme"] = true;
+      this.frontend.theme = theme;
+      this.setTheme(theme);
+    },
+    checkVersions(param) {
+      if (
+        param.versions &&
+        !param.versions.includes(AdvancedRpc.installedVersion)
+      ) {
+        return false;
+      } else if (
+        param.versionsSmallerThan &&
+        AdvancedRpc.installedVersion >= param.versionsSmallerThan
+      ) {
+        return false;
+      } else {
+        return true;
+      }
+    },
+    initBubbles() {
+      let bubbles = [];
+      this.remoteData?.bubbles?.forEach((bubble) => {
+        if (this.checkVersions(bubble)) bubbles.push(bubble);
+      });
+
+      if (app.cfg.general.privateEnabled && this.settings.respectPrivateSession)
+        bubbles.push(undefined);
+
+      if (app.cfg.connectivity.discord_rpc.enabled) bubbles.push(undefined);
+
+      this.bubbles = bubbles;
     },
   },
 });

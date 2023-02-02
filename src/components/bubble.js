@@ -13,10 +13,9 @@ export default Vue.component("arpc-bubble", {
   ],
   template: `
   <div
-  v-if="checkVersions()"
   class="arpc-bubble"
   :style="{'border-color': color, 'background': backgroundColor || color + '1a', 'cursor': url ? 'pointer' : 'default'}"
-  @click="url && redirectToLink(url)"
+  @click="url && doAction(url)"
 >
   <div v-if="icon" class="arpc-bubble-icon">
     <svg
@@ -61,29 +60,22 @@ export default Vue.component("arpc-bubble", {
       ></path>
     </svg>
   </div>
-  <div class="arpc-bubble-text" :style="{'color': textColor || '#fff'}">
+  <div class="arpc-bubble-text" :style="{'color': textColor || ''}">
     {{message}}
   </div>
 </div>
 
   `,
   methods: {
-    redirectToLink(url) {
-      window.open(url, "_blank");
-    },
-    checkVersions() {
-      if (
-        this.versions &&
-        !this.versions.includes(AdvancedRpc.installedVersion)
-      ) {
-        return false;
-      } else if (
-        this.versionsSmallerThan &&
-        AdvancedRpc.installedVersion >= this.versionsSmallerThan
-      ) {
-        return false;
+    doAction(item) {
+      if (item.startsWith("arpc.")) {
+        this.$emit("sidebar-item", item.replace("arpc.", ""));
+      } else if (item.startsWith("modal.")) {
+        this.$emit("set-modal", item.replace("modal.", ""));
+      } else if (item.startsWith("theme.")) {
+        this.$emit("set-theme", item.replace("theme.", ""));
       } else {
-        return true;
+        window.open(item, "_blank");
       }
     },
   },

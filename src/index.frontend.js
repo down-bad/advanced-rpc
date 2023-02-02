@@ -409,6 +409,8 @@ class AdvancedRpcFrontend {
           `plugin.${this.PLUGIN_NAME}.${this.FRONTEND_KEY}`,
           JSON.stringify({
             sidebar: "general",
+            theme: "dark",
+            bubblesExpanded: true,
           })
         );
         return this.getFrontendData();
