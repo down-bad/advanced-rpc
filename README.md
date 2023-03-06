@@ -16,9 +16,10 @@ Fully customize your Discord Presence while listening to Cider.
 - Constantly updated with new features and bug fixes through AdvancedRPC's built-in updater
 
 ## Instructions
-Press Install and restart Cider. Then, go to Cider's Connectivity settings, disable Discord Rich Presence and restart again.
 
-Access AdvancedRPC settings from the plugins menu. (Cider logo > Plugin > AdvancedRPC)
+After installing AdvancedRPC, go to Cider's Connectivity settings, disable Discord Rich Presence and restart Cider.
+
+Access AdvancedRPC settings from the plugins menu.
 
 ## FAQ
 
@@ -36,4 +37,5 @@ This is because the default Client ID that comes with the plugin is different fr
 
 ## Credits
 
+[coredev-uk](https://github.com/coredev-uk) & [Cider](https://github.com/ciderapp/Cider): This plugin is using a modified version of the original Cider RPC  
 [Cider-Plugin-Template](https://github.com/ChaseIngebritson/Cider-Plugin-Template)
