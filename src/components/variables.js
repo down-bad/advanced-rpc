@@ -1,13 +1,17 @@
 export default Vue.component("arpc-variables-modal", {
   template: `
-  <div class="arpc-modal-layer" @click.self="$emit('close-variables')">
+  <div
+  class="arpc-modal-layer"
+  id="arpc-variables-modal"
+  @click.self="$emit('close-variables')"
+>
   <div class="arpc-modal-window">
     <div class="arpc-modal-header">
       <div>Variables</div>
       <arpc-close-button @close="$emit('close-variables')"></arpc-close-button>
     </div>
     <div class="arpc-modal-content">
-      <h4>Text Variables</h4>
+      <div class="arpc-label">Text Variables</div>
       <div id="arpc-variables">
         <div>{title}</div>
         <div>{artist}</div>
@@ -22,7 +26,7 @@ export default Vue.component("arpc-variables-modal", {
         <div>{artistId}</div>
       </div>
 
-      <h4>Podcasts Variables</h4>
+      <div class="arpc-label">Podcasts Variables</div>
       <div id="arpc-variables">
         <div>{episodeNumber}</div>
         <div>{applePodcastsUrl}</div>
@@ -30,14 +34,14 @@ export default Vue.component("arpc-variables-modal", {
         <div>{assetUrl}</div>
       </div>
 
-      <h4>Radio Stations Variables</h4>
+      <div class="arpc-label">Radio Stations Variables</div>
       <div id="arpc-variables">
         <div>{radioName}</div>
         <div>{radioTagline}</div>
         <div>{radioUrl}</div>
       </div>
 
-      <h4>Variables Style</h4>
+      <div class="arpc-label">Variables Style</div>
       <div id="arpc-variables">
         <div>{variable^}</div>
         for uppercase
@@ -47,7 +51,7 @@ export default Vue.component("arpc-variables-modal", {
         for lowercase
       </div>
 
-      <h4>URL Variables (for buttons)</h4>
+      <div class="arpc-label">URL Variables (for buttons)</div>
       <div id="arpc-variables">
         <div>{appleMusicUrl}</div>
         <div>{albumUrl}</div>

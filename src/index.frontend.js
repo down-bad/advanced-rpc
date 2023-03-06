@@ -6,6 +6,10 @@ import CloseButton from "./components/close-button.js";
 import Variables from "./components/variables.js";
 import Sidebar from "./components/sidebar.js";
 import ConfirmModal from "./components/confirm-modal.js";
+import General from "./components/settings-general.js";
+import Podcasts from "./components/settings-podcasts.js";
+import Videos from "./components/settings-videos.js";
+import Radio from "./components/settings-radio.js";
 
 // To remove "import not used" warnings
 Frontend;
@@ -16,6 +20,10 @@ CloseButton;
 Variables;
 Sidebar;
 ConfirmModal;
+General;
+Podcasts;
+Videos;
+Radio;
 
 class AdvancedRpcFrontend {
   PLUGIN_NAME = "AdvancedRPC";
@@ -28,6 +36,13 @@ class AdvancedRpcFrontend {
   changelog = undefined;
   unappliedSettings = false;
   updateInProgress = false;
+  artworksUpdate = null;
+
+  checkingForUpdate = false;
+  gettingRemoteData = false;
+  gettingChangelog = false;
+  gettingLatestVersion = false;
+  gettingAnimatedArtworks = false;
 
   constructor() {
     console.log(`[Plugin][${this.PLUGIN_NAME}] Frontend established.`);
@@ -88,7 +103,7 @@ class AdvancedRpcFrontend {
         : "disabled";
     }
 
-    if (!settings.imageSize) settings["imageSize"] = 1024;
+    if (!settings.imageSize) settings["imageSize"] = "1024";
     if (!settings.play.fallbackImage)
       settings["play"]["fallbackImage"] = "applemusic";
     if (!settings.pause.fallbackImage)
@@ -96,6 +111,7 @@ class AdvancedRpcFrontend {
     if (!settings.applySettings) settings["applySettings"] = "manually";
     if (settings.applySettings === "state")
       settings["applySettings"] = "manually";
+    if (!settings.removePause) settings["removePause"] = "0";
 
     if (typeof settings.removeInvalidButtons === "undefined")
       settings["removeInvalidButtons"] = true;
@@ -213,7 +229,7 @@ class AdvancedRpcFrontend {
         usePlayButtons: false,
         button1: {
           label: "Listen on Apple Music",
-          url: "{appleMusicUrl}",
+          url: "{radioUrl}",
         },
         button2: {
           label: "",
@@ -292,7 +308,7 @@ class AdvancedRpcFrontend {
           usePlayButtons: false,
           button1: {
             label: "Listen on Apple Music",
-            url: "{appleMusicUrl}",
+            url: "{radioUrl}",
           },
           button2: {
             label: "",
@@ -391,9 +407,10 @@ class AdvancedRpcFrontend {
             },
           },
         },
-        imageSize: 1024,
+        imageSize: "1024",
         applySettings: "manually",
         removeInvalidButtons: true,
+        removePause: "0",
       })
     );
   }
@@ -428,61 +445,163 @@ class AdvancedRpcFrontend {
     );
   }
 
-  async checkForUpdates(init) {
-    try {
-      this.remoteData = await fetch(
-        "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json"
-      ).then((response) => response.json());
-
-      ipcRenderer.invoke(
-        `plugin.${this.PLUGIN_NAME}.remoteData`,
-        this.remoteData
-      );
-    } catch (e) {}
-
-    try {
-      const { version } = await fetch(
-        "https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json"
-      ).then((response) => response.json());
-      if (init && version > this.installedVersion) {
-        const updateNotyf = notyf.error({
-          message: "There is a new AdvancedRPC version available!",
-          icon: false,
-          background: "#5865f2",
-          duration: "5000",
-          dismissible: true,
-        });
-        updateNotyf.on("click", ({ target, event }) => {
-          app.appRoute("plugin/advancedrpc");
-        });
-      }
-      this.latestVersion = version;
-    } catch (e) {
-      console.log(`[Plugin][${this.PLUGIN_NAME}] Error checking for updates.`);
-      console.log(e);
-      this.latestVersion = null;
-    }
-
-    try {
-      if (this.remoteData.animatedArtworks) {
-        const artworks = await fetch(
-          "https://files.imvasi.com/arpc/artworks.json",
-          { cache: "reload" }
+  async getRemoteData() {
+    if (!this.gettingRemoteData) {
+      this.gettingRemoteData = true;
+      try {
+        this.remoteData = await fetch(
+          "https://cdn.jsdelivr.net/gh/down-bad/advanced-rpc@dev-main/remote/data.json"
         ).then((response) => response.json());
 
-        ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.artworks`, artworks);
+        ipcRenderer.invoke(
+          `plugin.${this.PLUGIN_NAME}.remoteData`,
+          this.remoteData
+        );
+        this.gettingRemoteData = false;
+        return true;
+      } catch (e) {
+        console.log(
+          `[Plugin][${this.PLUGIN_NAME}] Error fetching remote data. Some features may not work.`
+        );
+        console.log(e);
+        this.gettingRemoteData = false;
+        return false;
       }
-    } catch {}
-
-    try {
-      if (init) this.changelog = "Fetching changelog...";
-
-      this.changelog = await fetch(
-        "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/changelog.html"
-      ).then((response) => response.text());
-    } catch (e) {
-      this.changelog = "Failed to fetch changelog";
     }
+  }
+
+  async getLatestVersion(init) {
+    if (!this.gettingLatestVersion) {
+      this.gettingLatestVersion = true;
+      try {
+        const { version } = await fetch(
+          "https://cdn.jsdelivr.net/gh/down-bad/advanced-rpc@main/package.json"
+        ).then(async (response) => response.json());
+
+        if (version > this.installedVersion && init) {
+          const updateNotyf = notyf.error({
+            message: "There is a new AdvancedRPC version available!",
+            icon: false,
+            background: "#5865f2",
+            duration: "5000",
+            dismissible: true,
+          });
+          updateNotyf.on("click", ({ target, event }) => {
+            app.appRoute("plugin/advancedrpc");
+          });
+        }
+        this.latestVersion = version;
+        this.gettingLatestVersion = false;
+        this.checkingForUpdate = false;
+        return true;
+      } catch (e) {
+        console.log(
+          `[Plugin][${this.PLUGIN_NAME}] Error checking for updates.`
+        );
+        console.log(e);
+        this.latestVersion = null;
+        this.gettingLatestVersion = false;
+        this.checkingForUpdate = false;
+        return false;
+      }
+    }
+  }
+
+  async getChangelog() {
+    if (!this.gettingChangelog) {
+      this.gettingChangelog = true;
+      try {
+        const changelog = await fetch(
+          "https://cdn.jsdelivr.net/gh/down-bad/advanced-rpc@dev-main/remote/changelog.html"
+        ).then(async (response) => response.text());
+        this.changelog = changelog;
+        this.gettingChangelog = false;
+        return true;
+      } catch (e) {
+        console.log(`[Plugin][${this.PLUGIN_NAME}] Error fetching changelog.`);
+        console.log(e);
+        this.changelog = "Failed to fetch changelog";
+        this.gettingChangelog = false;
+        return false;
+      }
+    }
+  }
+
+  async getAnimatedArtworks(init) {
+    if (!this.gettingAnimatedArtworks) {
+      this.gettingAnimatedArtworks = true;
+      try {
+        if (this.remoteData?.animatedArtworks) {
+          let artworks = await fetch(
+            `https://arpc-api.imvasi.com/getArtworks?startup=${
+              init ?? "false"
+            }`,
+            {
+              cache: "no-store",
+            }
+          ).then((response) => {
+            if (response.status === 200) {
+              this.artworksUpdate = response.headers.get("Last-Modified");
+              return response.json();
+            }
+          });
+
+          if (!artworks || !Object.keys(artworks).length) {
+            artworks = await fetch(
+              "https://files.imvasi.com/arpc/artworks.json",
+              {
+                cache: "no-store",
+              }
+            ).then((response) => {
+              this.artworksUpdate = response.headers.get("Last-Modified");
+              return response.json();
+            });
+          }
+
+          if (artworks) {
+            ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.artworks`, artworks);
+            this.gettingAnimatedArtworks = false;
+            return true;
+          }
+        }
+      } catch (e) {
+        console.log(
+          `[Plugin][${this.PLUGIN_NAME}] Error fetching animated artworks.`
+        );
+        console.log(e);
+        this.gettingAnimatedArtworks = false;
+        return false;
+      }
+    }
+  }
+
+  async checkForUpdates(init) {
+    this.checkingForUpdate = true;
+    await this.getRemoteData();
+
+    const promises = [
+      this.getLatestVersion(init),
+      this.getAnimatedArtworks(init),
+      this.getChangelog(),
+    ];
+
+    await Promise.allSettled(promises);
+  }
+
+  async update() {
+    AdvancedRpc.updateInProgress = true;
+    ipcRenderer.once("plugin-installed", (event, arg) => {
+      if (arg.success) {
+        ipcRenderer.invoke("relaunchApp");
+      } else {
+        notyf.error("Error updating AdvancedRPC");
+        AdvancedRpc.updateInProgress = false;
+      }
+    });
+    ipcRenderer.invoke(
+      "get-github-plugin",
+      "https://github.com/down-bad/advanced-rpc"
+    );
   }
 }
 
@@ -494,4 +613,8 @@ ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.itemChanged`, (e, data) => {
     `plugin.${AdvancedRpc.PLUGIN_NAME}.currentItem`,
     currentItem
   );
+});
+
+ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.consoleLog`, (e, data) => {
+  console.log(data);
 });

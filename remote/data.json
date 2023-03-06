@@ -104,6 +104,5 @@
     "clickText": "Who knows, if you do that {clicks} more times maybe something will happen...",
     "color": "#1d2537"
   },
-  "animatedArtworks": true,
-  "icloudArtworks": false
+  "animatedArtworks": true
 }

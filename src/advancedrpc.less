@@ -1,41 +1,5 @@
 @import (less)
-  "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/colors.less";
-
-@font-face {
-  font-family: "Whitney";
-  font-style: normal;
-  font-weight: 300;
-  src: url("./fonts/whitney-300.woff2") format("woff2"),
-    url("./fonts/whitney-300.woff") format("woff");
-}
-@font-face {
-  font-family: "Whitney";
-  font-style: normal;
-  font-weight: 400;
-  src: url("./fonts/whitney-400.woff2") format("woff2"),
-    url("./fonts/whitney-400.woff") format("woff");
-}
-@font-face {
-  font-family: "Whitney";
-  font-style: normal;
-  font-weight: 500;
-  src: url("./fonts/whitney-500.woff2") format("woff2"),
-    url("./fonts/whitney-500.woff") format("woff");
-}
-@font-face {
-  font-family: "Whitney";
-  font-style: normal;
-  font-weight: 600;
-  src: url("./fonts/whitney-600.woff2") format("woff2"),
-    url("./fonts/whitney-600.woff") format("woff");
-}
-@font-face {
-  font-family: "Whitney";
-  font-style: normal;
-  font-weight: 700;
-  src: url("./fonts/whitney-700.woff2") format("woff2"),
-    url("./fonts/whitney-700.woff") format("woff");
-}
+  "https://cdn.jsdelivr.net/gh/down-bad/advanced-rpc@dev-main/remote/colors.less";
 
 @font-face {
   font-family: "gg sans";
@@ -63,32 +27,37 @@
 }
 
 :root {
-  --arpc-background: #36393f;
-  --arpc-secondary: #2f3136;
+  --arpc-background: #313338;
+  --arpc-secondary: #2b2d31;
   --arpc-text-primary: #fff;
-  --arpc-text-secondary: #b9bbbe;
-  --arpc-dark: #202225;
-  --arpc-text-input: #dcddde;
-  --arpc-divider: #42464d;
-  --arpc-link: #00aff4;
+  --arpc-text-secondary: #b8b9bf;
+  --arpc-dark: #1e1f22;
+  --arpc-text-input: #e0e1e5;
+  --arpc-divider: #3f4147;
+  --arpc-link: #00aafc;
   --arpc-header: #fff;
+  --arpc-footer-text: #b8b9bf;
+  --arpc-bubble-text: #e0e1e5;
 
   --arpc-modal-header: #fff;
-  --arpc-modal-background: #36393f;
-  --arpc-modal-secondary: #2f3136;
-  --arpc-modal-text: #dcddde;
-  --arpc-changelog: #b9bbbe;
-  --arpc-changelog-divider: #46c46e;
-  --arpc-modal-variable: #202225;
+  --arpc-modal-subtitle: #b8b9bf;
+  --arpc-modal-background: #313338;
+  --arpc-modal-secondary: #2b2d31;
+  --arpc-modal-text: #e0e1e5;
+  --arpc-modal-footer-text: #e0e1e5;
+  --arpc-changelog: #c7c8ce;
+  --arpc-changelog-divider: #2dc771;
+  --arpc-modal-variable: #1e1f22;
   --arpc-modal-backdrop: #000000d9;
 
-  --arpc-sidebar-item-text: #b9bbbe;
-  --arpc-sidebar-item-hover: #3c3f45;
-  --arpc-sidebar-item-hover-text: #dcddde;
-  --arpc-sidebar-item-active: #3f4248;
-  --arpc-sidebar-selected: #42464d;
+  --arpc-sidebar-item-text: #b8b9bf;
+  --arpc-sidebar-item-hover: #35373c;
+  --arpc-sidebar-item-hover-text: #e0e1e5;
+  --arpc-sidebar-item-active: #3b3d44;
+  --arpc-sidebar-selected: #404249;
   --arpc-sidebar-selected-text: #fff;
-  --arpc-sidebar-separator: #3f4248;
+  --arpc-sidebar-separator: #3b3d44;
+  --arpc-sidebar-eyebrow: #989aa2;
 
   --arpc-sidebar-blue: #5865f2;
   --arpc-sidebar-blue-text: #fff;
@@ -97,14 +66,14 @@
   --arpc-sidebar-blue-active: #3c45a5;
   --arpc-sidebar-blue-active-text: #fff;
 
-  --arpc-switch-unchecked: #72767d;
-  --arpc-switch-unchecked-active: #61808a;
-  --arpc-switch-checked: #3ba55d;
-  --arpc-switch-checked-active: #4b9a83;
+  --arpc-switch-unchecked: #82858f;
+  --arpc-switch-unchecked-active: #678f7f;
+  --arpc-switch-checked: #23a55a;
+  --arpc-switch-checked-active: #409b6a;
   --arpc-switch-handle-unchecked: #fff;
   --arpc-switch-handle-checked: #fff;
 
-  --arpc-button-underline: #dcddde;
+  --arpc-button-underline: #e0e1e5;
   --arpc-button-blue: #5865f2;
   --arpc-button-blue-text: #fff;
   --arpc-button-blue-hover: #4752c4;
@@ -129,8 +98,7 @@
 
 .advancedrpc {
   * {
-    font-family: "gg sans", "Whitney", "Helvetica Neue", Helvetica, Arial,
-      sans-serif !important;
+    font-family: "gg sans", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
   }
 
   a {
@@ -145,7 +113,7 @@
 
   input[type="checkbox"][switch],
   input[type="checkbox"][switch]:not(:checked) {
-    width: 40px;
+    width: 42px;
     height: 24px;
     border-radius: 14px;
     background: var(--arpc-switch-unchecked) !important;
@@ -177,7 +145,7 @@
   }
 
   input[type="checkbox"][switch]:checked::before {
-    left: 14px;
+    left: 16px;
     background: var(--arpc-switch-handle-checked) !important;
   }
 
@@ -239,6 +207,23 @@
   }
 }
 
+.arpc-label {
+  margin-bottom: 3px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--arpc-text-secondary);
+}
+
+#arpc-variables-modal {
+  .arpc-label {
+    margin-top: 10px;
+    color: var(--arpc-modal-subtitle);
+  }
+}
+
 .arpc-settings {
   margin-top: var(--chromeHeight1);
   margin-bottom: calc(var(--chromeHeight2) + 40px);
@@ -250,7 +235,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    color: var(--arpc-text-secondary);
+    color: var(--arpc-footer-text);
     font-size: 12px;
     font-weight: 400;
     margin-top: 80px;
@@ -352,6 +337,20 @@
     height: 1px;
   }
 
+  .arpc-sidebar-eyebrow {
+    color: var(--arpc-sidebar-eyebrow);
+    padding: 6px 10px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    -ms-flex-negative: 0;
+    flex-shrink: 0;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
   footer {
     margin-left: 5px;
     margin-top: 10px;
@@ -404,7 +403,6 @@
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: 20px;
-  color: var(--arpc-header);
 
   img {
     margin-right: 5px;
@@ -415,6 +413,7 @@
     margin-top: 0;
     margin-bottom: 0;
     font-size: 24px;
+    color: var(--arpc-header);
   }
 }
 
@@ -506,7 +505,7 @@
 }
 
 .arpc-multiple-items input[type="text"] {
-  margin-bottom: 5px;
+  margin-bottom: 7px;
 }
 
 .arpc-bubbles-bar {
@@ -546,7 +545,7 @@
   .arpc-bubble-text {
     flex: 1;
     align-self: center;
-    color: var(--arpc-text-input);
+    color: var(--arpc-bubble-text);
   }
 
   .arpc-bubble-icon {
@@ -719,6 +718,39 @@
       font-weight: 600;
     }
 
+    .arpc-modal-header2 {
+      color: var(--arpc-modal-header);
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+      flex-direction: column;
+      -webkit-box-align: center;
+      align-items: center;
+      padding-top: 24px;
+      padding-bottom: 24px;
+
+      .arpc-close-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+      }
+
+      .arpc-modal-header2-title {
+        text-align: center;
+        font-weight: 700;
+        font-size: 24px;
+        line-height: 30px;
+      }
+
+      .arpc-modal-header2-subtitle {
+        color: var(--arpc-modal-subtitle);
+        margin-top: 8px;
+        text-align: center;
+        font-size: 16px;
+        line-height: 20px;
+        font-weight: 400;
+      }
+    }
+
     .arpc-modal-content {
       font-size: 16px;
       color: var(--arpc-modal-text);
@@ -767,7 +799,7 @@
       padding: 13px;
       border-radius: 0 0 5px 5px;
       background-color: var(--arpc-modal-secondary);
-      color: var(--arpc-modal-text);
+      color: var(--arpc-modal-footer-text);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -779,6 +811,13 @@
         button {
           margin-left: 5px;
         }
+      }
+
+      .arpc-modal-footer-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        word-break: break-all;
       }
     }
   }
@@ -807,6 +846,10 @@
         margin-left: 4px;
         opacity: 0.6;
       }
+    }
+
+    .arpc-modal-footer button {
+      margin-left: 15px;
     }
   }
 }
@@ -949,7 +992,7 @@
   }
   100% {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.8);
   }
 }
 

@@ -1,6 +1,10 @@
 export default Vue.component("arpc-confirm-modal", {
   template: `
-  <div class="arpc-modal-layer" @click.self="$emit('close-modal')">
+  <div
+  class="arpc-modal-layer"
+  id="arpc-confirm-modal"
+  @click.self="$emit('close-modal')"
+>
   <div class="arpc-modal-window">
     <div class="arpc-modal-header">
       <div>{{ title }}</div>

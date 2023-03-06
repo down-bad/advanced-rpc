@@ -1,11 +1,10 @@
 const { AutoClient } = require("discord-auto-rpc");
 const { ipcMain } = require("electron");
 const { join } = require("path");
-const axios = require("axios");
-
 module.exports = class AdvancedRpcBackend {
   constructor(env) {
     this._env = env;
+    this._utils = env.utils;
     this._store = env.utils.getStore();
 
     this.name = "AdvancedRPC";
@@ -13,39 +12,27 @@ module.exports = class AdvancedRpcBackend {
     this.version = "[VI]{version}[/VI]";
     this.author = "down-bad (Vasilis#1517)";
 
-    this._settings = {};
-    this._prevSettings = {};
-    this._initSettings = {};
-    this._nextSettings = {};
+    this._client = null;
     this.init = false;
-
-    this._utils = env.utils;
-    this._attributes = undefined;
     this.ready = false;
 
-    this._client = null;
-    this.activityCache = {
-      details: "",
-      state: "",
-      largeImageKey: "",
-      largeImageText: "",
-      smallImageKey: "",
-      smallImageText: "",
-      instance: false,
-    };
-    this.startedTime = null;
-    this.updateTime = 0;
-    this.pauseTime = Date.now();
-    this.itemId = "0";
+    this._settings = {};
+    this._prevSettings = {};
+    this._initSettings = false;
 
-    this.coverImage = {
-      id: null,
-      url: null,
-    };
+    this._attributes = undefined;
+    this._prevAttributes = undefined;
+
+    this.updateTime = 0;
+    this.startedTime = null;
+    this.pauseTime = Date.now();
 
     this.remoteData = {};
     this.artworks = {};
     this.currentItem = {};
+
+    this.interval = null;
+    this.cleared = false;
   }
 
   onReady(_win) {
@@ -53,128 +40,47 @@ module.exports = class AdvancedRpcBackend {
   }
 
   async onRendererReady(_win) {
+    this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
+
+    try {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.itemChanged`, null);
+    } catch {}
+
+    this.startedTime = Date.now();
+    this.pauseTime = Date.now();
+
+    // Initialize arpc settings
     try {
       ipcMain.handle(`plugin.${this.name}.initSettings`, (_event, settings) => {
         if (!settings) return;
-        this._prevSettings = this._settings;
         this._settings = settings;
+        this._prevSettings = settings;
+        this._initSettings = true;
 
         if (!this.init) {
           this.init = true;
           this.connect();
         }
-      });
-
-      ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
-        if (!settings) return;
-
-        this._settings.applySettings = settings.applySettings;
-
-        if (Object.keys(this._initSettings).length === 0)
-          this._initSettings = this._settings;
-        else this._initSettings.applySettings = this._settings.applySettings;
-
-        if (
-          settings.applySettings === "manually" ||
-          settings.applySettings === "state"
-        ) {
-          if (JSON.stringify(this._initSettings) === JSON.stringify(settings))
-            this._utils
-              .getWindow()
-              .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-          else
-            this._utils
-              .getWindow()
-              .webContents.send(`plugin.${this.name}.unappliedSettings`, true);
-
-          if (settings.applySettings === "state") {
-            this._prevSettings = this._settings;
-            this._nextSettings = settings;
-          }
-        } else {
-          this._prevSettings = this._settings;
-          this._settings = settings;
-
-          if (this._prevSettings.appId === this._settings.appId)
-            this.setActivity(this._attributes);
-        }
-
-        if (!this.init) {
-          this.init = true;
-          this.connect();
-        }
-      });
-
-      ipcMain.handle(`plugin.${this.name}.resetChanges`, (_event) => {
-        if (Object.keys(this._initSettings).length !== 0) {
-          this._utils
-            .getWindow()
-            .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-          this._utils
-            .getWindow()
-            .webContents.send(
-              `plugin.${this.name}.setPrevSettings`,
-              this._initSettings
-            );
-        }
-      });
-
-      ipcMain.handle(
-        `plugin.${this.name}.updateSettings`,
-        (_event, settings) => {
-          if (!settings) return;
-          this._prevSettings = this._settings;
-          this._settings = settings;
-          this._initSettings = {};
-          this._utils
-            .getWindow()
-            .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-          this.setActivity(this._attributes);
-        }
-      );
-
-      ipcMain.on("discordrpc:updateImage", async (_event, artworkUrl) => {
-        if (
-          !this.remoteData?.icloudArtworks ||
-          this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
-          this._attributes?.artwork?.url
-        )
-          return;
-
-        const res = await axios.post(
-          "https://api.cider.sh/v1/images",
-          { url: artworkUrl },
-          {
-            headers: {
-              "User-Agent": this._utils.getWindow().webContents.getUserAgent(),
-              url: artworkUrl,
-            },
-          }
-        );
-
-        this.coverImage.id = this._attributes?.songId;
-        this.coverImage.url = `https://images.weserv.nl/?url=${
-          res?.data?.imageUrl
-        }&w=${this._settings.imageSize ?? 1024}&h=${
-          this._settings.imageSize ?? 1024
-        }&output=jpg&fit=cover`;
-
-        this.setActivity(this._attributes);
       });
     } catch {}
 
+    // Initialize remote data
     try {
       ipcMain.handle(`plugin.${this.name}.remoteData`, (_event, data) => {
         this.remoteData = data;
       });
     } catch {}
 
+    // Initialize animated artworks
     try {
       ipcMain.handle(`plugin.${this.name}.artworks`, (_event, artworks) => {
         this.artworks = artworks;
       });
     } catch {}
 
+    // Get current song data from localStorage
     try {
       ipcMain.handle(`plugin.${this.name}.currentItem`, (_event, item) => {
         if (item) this.currentItem = JSON.parse(item);
@@ -182,32 +88,74 @@ module.exports = class AdvancedRpcBackend {
       });
     } catch {}
 
-    this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
-  }
+    // Handle arpc settings changes
+    ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
+      if (!settings || !this._initSettings) return;
 
-  onBeforeQuit() {
-    console.debug(`[Plugin][${this.name}] Stopped.`);
-  }
+      this._settings.applySettings = settings.applySettings;
 
-  connect() {
-    // Create the client
-    this._client = new AutoClient({ transport: "ipc" });
+      console.log(this._prevSettings);
 
-    // Runs on Ready
-    this._client.once("ready", () => {
-      console.info(
-        `[Plugin][${this.name}][connect] Successfully Connected to Discord. Authed for user: ${this._client.user.id}.`
-      );
-
-      if (this._activityCache) {
-        console.info(
-          `[Plugin][${this.name}][connect] Restoring activity cache.`
-        );
-        this._client.setActivity(this._activityCache);
+      if (settings.applySettings === "manually") {
+        if (JSON.stringify(this._prevSettings) === JSON.stringify(settings))
+          this._utils
+            .getWindow()
+            .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+        else {
+          this._utils
+            .getWindow()
+            .webContents.send(`plugin.${this.name}.unappliedSettings`, true);
+        }
+      } else {
+        this._prevSettings = settings;
+        this._settings = settings;
+        this.setActivity(this._attributes);
       }
     });
 
-    // Login to Discord
+    ipcMain.handle(`plugin.${this.name}.updateSettings`, (_event, settings) => {
+      if (!settings) return;
+
+      this._prevSettings = settings;
+      this._settings = settings;
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      this.setActivity(this._attributes);
+    });
+
+    ipcMain.handle(`plugin.${this.name}.resetChanges`, (_event) => {
+      if (Object.keys(this._prevSettings).length !== 0) {
+        this._utils
+          .getWindow()
+          .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+        this._utils
+          .getWindow()
+          .webContents.send(
+            `plugin.${this.name}.setPrevSettings`,
+            this._prevSettings
+          );
+      } else {
+        this._utils
+          .getWindow()
+          .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      }
+    });
+  }
+
+  connect() {
+    this._client = new AutoClient({ transport: "ipc" });
+
+    this._client.once("ready", () => {
+      console.info(
+        `[Plugin][${this.name}] Connected to Discord as ${this._client.user.id}.`
+      );
+
+      this.interval = setInterval(() => {
+        this.handleActivity(this._attributes, this._prevAttributes);
+      }, 500);
+    });
+
     this._client
       .endlessLogin({
         clientId: this._settings.appId,
@@ -215,111 +163,95 @@ module.exports = class AdvancedRpcBackend {
       .then(() => {
         this.ready = true;
       })
-      .catch((e) => console.error(`[Plugin][${this.name}][connect] ${e}`));
+      .catch((e) => console.error(`[Plugin][${this.name}] ${e}`));
   }
 
   onPlaybackStateDidChange(attributes) {
-    if (attributes.kind !== "song") {
+    this._attributes = attributes;
+  }
+
+  onNowPlayingItemDidChange(attributes) {
+    this._attributes = attributes;
+  }
+
+  playbackTimeDidChange(attributes) {
+    this._attributes = attributes;
+  }
+
+  handleActivity(attributes, prevAttributes) {
+    if (!this.ready) return;
+
+    // Song change
+    if (attributes.songId !== prevAttributes?.songId) {
       try {
         this._utils
           .getWindow()
           .webContents.send(`plugin.${this.name}.itemChanged`, null);
       } catch {}
+
+      this.startedTime = Date.now();
+      this.pauseTime = Date.now();
+      this.cleared = false;
     }
 
     if (
-      Object.keys(this._nextSettings).length !== 0 &&
-      this._settings.applySettings === "state"
-    ) {
-      this._utils
-        .getWindow()
-        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-      this._settings = this._nextSettings;
-      this._nextSettings = {};
-      this._initSettings = {};
+      attributes.kind === "song" &&
+      !attributes.songId.startsWith("i.") &&
+      this.currentItem?._songId !== attributes.songId
+    )
+      return;
+
+    // Pause
+    if (attributes.status !== prevAttributes?.status && !attributes.status) {
+      this.updateTime += 2000;
+      // Don't go above 5 seconds
+      if (this.updateTime > Date.now() + 5000)
+        this.updateTime = Date.now() + 5000;
+
+      this.pauseTime = Date.now();
+      this.cleared = false;
     }
 
-    if (!attributes.status) this.pauseTime = Date.now();
-    else this.startedTime = Date.now() - (this.pauseTime - this.startedTime);
-
-    // Workaround for non-song items so we can know if the item has changed
-    if (this.itemId !== attributes.songId) this.startedTime = Date.now();
-    this.itemId = attributes.songId;
-
-    if (attributes.kind === "radioStation") this.startedTime = Date.now();
-    this.setActivity(attributes);
-  }
-
-  onNowPlayingItemDidChange(attributes) {
-    try {
-      this._utils
-        .getWindow()
-        .webContents.send(`plugin.${this.name}.itemChanged`, null);
-    } catch {}
-
-    if (
-      Object.keys(this._nextSettings).length !== 0 &&
-      this._settings.applySettings === "state"
-    ) {
-      this._utils
-        .getWindow()
-        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-      this._settings = this._nextSettings;
-      this._nextSettings = {};
-      this._initSettings = {};
+    // Unpause
+    if (attributes.status !== prevAttributes?.status && attributes.status) {
+      this.updateTime -= 2000;
+      this.startedTime = Date.now() - (this.pauseTime - this.startedTime);
+      this.cleared = false;
     }
 
-    this.startedTime = Date.now();
-    this.pauseTime = Date.now();
-    this.setActivity(attributes);
-  }
+    if (this.cleared) return;
 
-  playbackTimeDidChange(attributes) {
+    let removePause = this._settings.removePause;
+    if (removePause < 0) removePause = 0;
+    if (removePause % 1 !== 0) removePause = Math.round(removePause);
+
     if (
-      (this.updateTime + 5000 < Date.now() &&
-        attributes.endTime - 5000 > Date.now()) ||
-      attributes.kind === "radioStation"
+      removePause > 0 &&
+      !attributes.status &&
+      this.pauseTime + removePause * 1000 < Date.now()
     ) {
-      if (attributes.kind !== "song") {
-        try {
-          this._utils
-            .getWindow()
-            .webContents.send(`plugin.${this.name}.itemChanged`, null);
-        } catch {}
-      }
+      this._client.clearActivity();
+      this.cleared = true;
+      return;
+    }
 
+    // Update activity
+    if (this.updateTime + 5000 < Date.now()) {
       this.setActivity(attributes);
+      this.updateTime = Date.now();
     }
+
+    this._prevAttributes = attributes;
   }
 
   setActivity(attributes) {
-    this._attributes = attributes;
-
     if (this._settings.applySettings === "immediately") {
       this._utils
         .getWindow()
         .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-      this._initSettings = {};
     }
 
     if (!this._client || !attributes) return;
-
-    if (
-      attributes.kind === "song" &&
-      this.currentItem?._songId !== attributes.songId &&
-      this.currentItem?.id !== attributes.songId
-    ) {
-      return setTimeout(() => {
-        try {
-          this._utils
-            .getWindow()
-            .webContents.send(`plugin.${this.name}.itemChanged`, null);
-        } catch {}
-        if (this.updateTime + 5000 < Date.now()) {
-          this.setActivity(attributes);
-        }
-      }, 3000);
-    }
 
     if (
       this._utils.getStoreValue("connectivity.discord_rpc.enabled") ||
@@ -329,6 +261,7 @@ module.exports = class AdvancedRpcBackend {
       attributes.playParams?.id === "no-id-found"
     ) {
       this._client.clearActivity();
+      this.cleared = true;
       return;
     }
 
@@ -372,23 +305,24 @@ module.exports = class AdvancedRpcBackend {
       settings = attributes.status ? this._settings.play : this._settings.pause;
     }
 
-    const fallbackImage = attributes.status
-      ? this._settings.play.fallbackImage
-      : this._settings.pause.fallbackImage;
+    const fallbackImage = this._settings.play.fallbackImage;
 
     activity.details = settings.details;
     activity.state = settings.state;
     activity.largeImageText = settings.largeImageText;
 
     // Set image size
-    if (this._settings.imageSize < 1) this._settings.imageSize = 1024;
+    let imageSize = this._settings.imageSize;
+    if (imageSize < 1) imageSize = 1024;
+    if (imageSize % 1 !== 0) imageSize = Math.round(imageSize);
 
     // Set large image
     if (settings.largeImage.startsWith("cover")) {
       activity.largeImageKey = this.setImage(
         attributes,
         settings,
-        fallbackImage
+        fallbackImage,
+        imageSize
       );
 
       if (
@@ -406,7 +340,8 @@ module.exports = class AdvancedRpcBackend {
       activity.smallImageKey = this.setImage(
         attributes,
         settings,
-        fallbackImage
+        fallbackImage,
+        imageSize
       );
 
       if (
@@ -513,29 +448,20 @@ module.exports = class AdvancedRpcBackend {
       }
     }
 
-    // Filter the activity
     activity = this.filterActivity(activity, attributes);
-
-    if (!this.ready) {
-      this._activityCache = activity;
-      return;
-    }
 
     if (
       (attributes.status && !settings.enabled) ||
       (!attributes.status && !settings.enabled)
     ) {
       this._client.clearActivity();
+      this.cleared = true;
     } else if (activity && this._activityCache !== activity) {
       this._client.setActivity(activity);
+      this.updateTime = Date.now();
     }
-    this._activityCache = activity;
-    this.updateTime = Date.now();
   }
 
-  /**
-   * Filter the Discord activity object
-   */
   filterActivity(activity, attributes) {
     let rpcTextVars = {
         artist: attributes.artistName ?? "",
@@ -577,6 +503,9 @@ module.exports = class AdvancedRpcBackend {
       rpcUrlVars[
         "radioUrl"
       ] = `https://music.apple.com/station/${rpcTextVars["songId"]}?src=arpc`;
+
+      if (rpcUrlVars["appleMusicUrl"].includes("/song/ra."))
+        rpcUrlVars["appleMusicUrl"] = rpcUrlVars["radioUrl"];
     }
 
     if (attributes.kind === "podcast-episodes") {
@@ -598,6 +527,9 @@ module.exports = class AdvancedRpcBackend {
       );
 
     if (this._settings.removeInvalidButtons) {
+      if (rpcUrlVars["appleMusicUrl"].includes("/song/-1"))
+        rpcUrlVars["appleMusicUrl"] = "";
+
       if (attributes.songId.startsWith("i.") || attributes.songId === "-1") {
         rpcUrlVars["appleMusicUrl"] = "";
         rpcUrlVars["ciderUrl"] = "";
@@ -803,10 +735,8 @@ module.exports = class AdvancedRpcBackend {
     return url.protocol === "http:" || url.protocol === "https:";
   }
 
-  setImage(attributes, settings, fallbackImage) {
-    if (this.coverImage.id === attributes.songId && this.coverImage.url) {
-      return this.coverImage.url;
-    } else if (
+  setImage(attributes, settings, fallbackImage, imageSize) {
+    if (
       attributes.kind === "song" &&
       settings.largeImage === "cover" &&
       this.remoteData?.animatedArtworks &&
@@ -818,8 +748,8 @@ module.exports = class AdvancedRpcBackend {
     } else {
       return (
         attributes.artwork?.url
-          ?.replace("{w}", this._settings.imageSize ?? 1024)
-          .replace("{h}", this._settings.imageSize ?? 1024) ?? fallbackImage
+          ?.replace("{w}", imageSize ?? 1024)
+          .replace("{h}", imageSize ?? 1024) ?? fallbackImage
       );
     }
   }
@@ -837,5 +767,13 @@ module.exports = class AdvancedRpcBackend {
         url: button2.url,
       });
     }
+  }
+
+  frontendLog(message) {
+    try {
+      this._utils
+        .getWindow()
+        .webContents.send(`plugin.${this.name}.consoleLog`, message);
+    } catch {}
   }
 };

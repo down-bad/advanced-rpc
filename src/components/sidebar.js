@@ -10,6 +10,7 @@ export default Vue.component("arpc-sidebar", {
         @click="$emit('click-ee', 'decorationClickEe')"
         v-if="remoteData?.titleDecorations?.rightImage"
         :src="remoteData?.titleDecorations?.rightImage"
+        :title="remoteData?.titleDecorations?.rightImageText"
         width="40"
         height="40"
         draggable="false"
@@ -19,7 +20,7 @@ export default Vue.component("arpc-sidebar", {
     <div
       v-for="item in sideBarItems?.upper"
       v-if="checkVersions(item)"
-      :class="{'arpc-sidebar-item': item.id !== 'separator', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
+      :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
       @click="doAction(item)"
     >
       {{ item.dest === 'modal.changelog' && installedVersion < latestVersion ?
@@ -30,7 +31,7 @@ export default Vue.component("arpc-sidebar", {
     <div
       v-for="item in sideBarItems?.lower"
       v-if="checkVersions(item)"
-      :class="{'arpc-sidebar-item': item.id !== 'separator', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
+      :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
       @click="doAction(item)"
     >
       {{ item.dest === 'modal.changelog' && installedVersion < latestVersion ?
@@ -107,9 +108,6 @@ export default Vue.component("arpc-sidebar", {
       } else {
         this.openLink(item.dest);
       }
-    },
-    setModal(modal) {
-      this.$emit("set-modal", modal);
     },
     openLink(url) {
       window.open(url, "_blank");
