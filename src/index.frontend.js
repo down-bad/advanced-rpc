@@ -450,7 +450,7 @@ class AdvancedRpcFrontend {
       this.gettingRemoteData = true;
       try {
         this.remoteData = await fetch(
-          "https://cdn.jsdelivr.net/gh/down-bad/advanced-rpc@dev-main/remote/data.json"
+          "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json"
         ).then((response) => response.json());
 
         ipcRenderer.invoke(
@@ -475,7 +475,7 @@ class AdvancedRpcFrontend {
       this.gettingLatestVersion = true;
       try {
         const { version } = await fetch(
-          "https://cdn.jsdelivr.net/gh/down-bad/advanced-rpc@main/package.json"
+          "https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json"
         ).then(async (response) => response.json());
 
         if (version > this.installedVersion && init) {
@@ -512,7 +512,7 @@ class AdvancedRpcFrontend {
       this.gettingChangelog = true;
       try {
         const changelog = await fetch(
-          "https://cdn.jsdelivr.net/gh/down-bad/advanced-rpc@dev-main/remote/changelog.html"
+          "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/changelog.html"
         ).then(async (response) => response.text());
         this.changelog = changelog;
         this.gettingChangelog = false;
