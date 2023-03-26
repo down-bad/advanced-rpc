@@ -65,13 +65,11 @@ export default Vue.component("plugin.advancedrpc", {
     <div class="arpc-settings">
       <arpc-sidebar
         :installedVersion="installedVersion"
-        :latestVersion="latestVersion"
+        :versionData="versionData"
         :versionInfo="versionInfo"
         :remoteData="remoteData"
         :frontend="frontend"
-        @sidebar-item="changeSidebarItem"
-        @set-modal="setModal"
-        @set-theme="unlockTheme"
+        @do-action="doAction"
         @click-ee="clickingEe"
       ></arpc-sidebar>
 
@@ -114,9 +112,7 @@ export default Vue.component("plugin.advancedrpc", {
               v-for="bubble in bubbles"
               v-if="bubble?.enabled"
               v-bind="bubble"
-              @sidebar-item="changeSidebarItem"
-              @set-modal="setModal"
-              @set-theme="unlockTheme"
+              @do-action="doAction"
             ></arpc-bubble></div
         ></Transition>
 
@@ -329,16 +325,43 @@ export default Vue.component("plugin.advancedrpc", {
                 :class="{ 'arpc-rumble' : remoteData?.themeClickEe?.id && !frontend[remoteData?.themeClickEe?.id + 'Theme'] }"
                 @click="clickingEe('themeClickEe')"
               >
-                Theme
+                <div class="arpc-option-with-badge">
+                  Theme
+                  <div
+                    v-if="remoteData?.themesBadge?.text"
+                    :style="{background: remoteData?.themesBadge?.color, color: remoteData?.themesBadge?.textColor}"
+                    class="arpc-badge"
+                  >
+                    {{ remoteData?.themesBadge?.text }}
+                  </div>
+                </div>
                 <small
                   v-if="themes.find(t => t.id === frontend.theme)?.description"
                 >
                   {{ themes.find(t => t.id === frontend.theme).description }}
                 </small>
               </div>
+
               <div class="arpc-option-segment arpc-option-segment_auto">
                 <label>
-                  <select class="arpc-select" v-model="frontend.theme">
+                  <select
+                    v-if="remoteData?.categorizedThemes"
+                    class="arpc-select"
+                    v-model="frontend.theme"
+                  >
+                    <option value="" disabled hidden>Select Theme</option>
+                    <optgroup
+                      v-for="(themes, key) in filteredCategorizedThemes"
+                      :label="key"
+                      v-if="themes.length > 0"
+                    >
+                      <option v-for="theme in themes" :value="theme.id">
+                        {{ theme.name }}
+                      </option>
+                    </optgroup>
+                  </select>
+
+                  <select v-else class="arpc-select" v-model="frontend.theme">
                     <option value="" disabled hidden>Select Theme</option>
                     <option v-for="theme in themes" :value="theme.id">
                       {{ theme.name }}
@@ -544,14 +567,12 @@ export default Vue.component("plugin.advancedrpc", {
       removePause: "0",
     },
     installedVersion: AdvancedRpc.installedVersion,
-    latestVersion: AdvancedRpc.latestVersion,
     unappliedSettings: AdvancedRpc.unappliedSettings,
     versionInfo: "[VI]ARPC {version} - {date}[/VI]",
     textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
     urlVariables: "{appleMusicUrl}, {ciderUrl}",
     variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
     modal: "",
-    remoteData: AdvancedRpc.remoteData,
     privateSessionBubble: {
       enabled: true,
       message:
@@ -573,8 +594,21 @@ export default Vue.component("plugin.advancedrpc", {
       bubblesExpanded: true,
     },
     themes: [],
+    filteredCategorizedThemes: {},
     bubbles: [],
   }),
+  computed: {
+    remoteData() {
+      const data = Vue.observable(window.AdvancedRpc).remoteData;
+      this.initBubbles(data?.bubbles);
+      if (data?.themes) this.themes = Object.values(data.themes).flat();
+      this.setTheme(this.frontend.theme, data);
+      return data;
+    },
+    versionData() {
+      return Vue.observable(window.AdvancedRpc).versionData;
+    },
+  },
   watch: {
     settings: {
       handler() {
@@ -586,14 +620,14 @@ export default Vue.component("plugin.advancedrpc", {
           `plugin.${AdvancedRpc.PLUGIN_NAME}.setting`,
           this.settings
         );
-        this.initBubbles();
+        this.initBubbles(this.remoteData?.bubbles);
       },
       deep: true,
     },
     frontend: {
       handler() {
         AdvancedRpc.setFrontendData(this.frontend);
-        this.setTheme(this.frontend.theme);
+        this.setTheme(this.frontend.theme, this.remoteData);
       },
       deep: true,
     },
@@ -606,8 +640,8 @@ export default Vue.component("plugin.advancedrpc", {
       frontend["bubblesExpanded"] = true;
     this.frontend = frontend;
 
-    this.setTheme(frontend.theme);
-    this.initBubbles();
+    this.setTheme(frontend.theme, this.remoteData);
+    this.initBubbles(this.remoteData?.bubbles);
   },
   async mounted() {
     ipcRenderer.on(
@@ -626,6 +660,9 @@ export default Vue.component("plugin.advancedrpc", {
     );
 
     document.onkeydown = this.checkKey;
+
+    if (!this.remoteData?.dontTriggerApiOnMount)
+      await AdvancedRpc.checkForUpdates("arpc");
   },
   methods: {
     receiveSettings(key, settings) {
@@ -674,11 +711,30 @@ export default Vue.component("plugin.advancedrpc", {
       this.frontend.sidebar = item;
       document.querySelector(".arpc-page").scrollIntoView();
     },
+    async doAction(item) {
+      if (item.dest) item = item.dest;
+      if (item.startsWith("arpc.")) {
+        this.changeSidebarItem(item.replace("arpc.", ""));
+      } else if (item.startsWith("modal.")) {
+        this.setModal(item.replace("modal.", ""));
+      } else if (item.startsWith("theme.")) {
+        const prevTheme = this.frontend.theme;
+        this.setTheme(item.replace("theme.", ""), this.remoteData);
+        if (prevTheme !== item.replace("theme.", ""))
+          this.reportThemeUnlock(item.replace("theme.", ""));
+      } else if (item.startsWith("unlockTheme.")) {
+        this.unlockTheme(item.replace("unlockTheme.", ""));
+      } else {
+        this.openLink(item);
+      }
+    },
     openLink(url) {
       window.open(url, "_blank");
     },
-    setTheme(theme) {
-      this.themes = this.remoteData?.themes;
+    setTheme(theme, remoteData) {
+      if (remoteData?.themes)
+        this.themes = Object.values(remoteData.themes).flat();
+      else this.themes = [];
 
       this.themes = this.themes?.filter((t) => {
         if (t.requirement) {
@@ -688,14 +744,29 @@ export default Vue.component("plugin.advancedrpc", {
         }
       });
 
-      if (this.remoteData?.forceTheme) {
+      if (remoteData?.themes)
+        Object.keys(remoteData.themes).forEach((key) => {
+          this.filteredCategorizedThemes[key] = remoteData.themes[key].filter(
+            (t) => {
+              if (t.requirement) {
+                return this.frontend[t.requirement];
+              } else {
+                return true;
+              }
+            }
+          );
+        });
+
+      if (remoteData?.forceTheme) {
         document
           .querySelector(".advancedrpc")
-          ?.setAttribute("arpc-theme", this.remoteData.forceTheme);
+          ?.setAttribute("arpc-theme", remoteData.forceTheme);
       } else if (this.themes?.find((t) => t.id === theme)) {
         document
           .querySelector(".advancedrpc")
           ?.setAttribute("arpc-theme", theme);
+
+        this.frontend.theme = theme;
       } else {
         document
           .querySelector(".advancedrpc")
@@ -752,29 +823,30 @@ export default Vue.component("plugin.advancedrpc", {
       }
     },
     unlockTheme(theme) {
+      const prevTheme = this.frontend.theme;
       this.frontend[theme + "Theme"] = true;
       this.frontend.theme = theme;
-      this.setTheme(theme);
+      this.setTheme(theme, this.remoteData);
+      if (prevTheme !== theme) this.reportThemeUnlock(theme);
     },
-    checkVersions(param) {
-      if (
-        param.versions &&
-        !param.versions.includes(AdvancedRpc.installedVersion)
-      ) {
-        return false;
-      } else if (
-        param.versionsSmallerThan &&
-        AdvancedRpc.installedVersion >= param.versionsSmallerThan
-      ) {
-        return false;
-      } else {
-        return true;
-      }
+    async reportThemeUnlock(theme) {
+      try {
+        await fetch(
+          `https://dev-api.imvasi.com/theme?version=${this.installedVersion}&theme=${theme}
+        `,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      } catch {}
     },
-    initBubbles() {
+    initBubbles(data) {
       let bubbles = [];
-      this.remoteData?.bubbles?.forEach((bubble) => {
-        if (this.checkVersions(bubble)) bubbles.push(bubble);
+      data?.forEach((bubble) => {
+        if (bubble.enabled) bubbles.push(bubble);
       });
 
       if (app.cfg.general.privateEnabled && this.settings.respectPrivateSession)

@@ -16,9 +16,7 @@ const OUTPUT_DIR =
 
 export default defineConfig([
   {
-    input: [
-      "src/index.js",
-    ],
+    input: ["src/index.js"],
     output: {
       dir: OUTPUT_DIR,
       format: "cjs",
@@ -37,6 +35,7 @@ export default defineConfig([
           { src: "package.json", dest: OUTPUT_DIR },
           { src: "README.md", dest: OUTPUT_DIR },
           { src: "src/advancedrpc.less", dest: OUTPUT_DIR },
+          { src: "src/colors.less", dest: OUTPUT_DIR },
           { src: "src/fonts", dest: OUTPUT_DIR },
         ],
       }),

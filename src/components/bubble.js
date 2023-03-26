@@ -8,14 +8,12 @@ export default Vue.component("arpc-bubble", {
     "backgroundColor",
     "textColor",
     "iconColor",
-    "versions",
-    "versionsSmallerThan",
   ],
   template: `
   <div
   class="arpc-bubble"
   :style="{'border-color': color, 'background': backgroundColor || color + '1a', 'cursor': url ? 'pointer' : 'default'}"
-  @click="url && doAction(url)"
+  @click="url && $emit('do-action', url)"
 >
   <div v-if="icon" class="arpc-bubble-icon">
     <svg
@@ -66,17 +64,4 @@ export default Vue.component("arpc-bubble", {
 </div>
 
   `,
-  methods: {
-    doAction(item) {
-      if (item.startsWith("arpc.")) {
-        this.$emit("sidebar-item", item.replace("arpc.", ""));
-      } else if (item.startsWith("modal.")) {
-        this.$emit("set-modal", item.replace("modal.", ""));
-      } else if (item.startsWith("theme.")) {
-        this.$emit("set-theme", item.replace("theme.", ""));
-      } else {
-        window.open(item, "_blank");
-      }
-    },
-  },
 });

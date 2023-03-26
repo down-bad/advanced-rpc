@@ -1,5 +1,4 @@
-@import (less)
-  "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/colors.less";
+@import (less) "./colors.less";
 
 @font-face {
   font-family: "gg sans";
@@ -162,8 +161,8 @@
     box-sizing: border-box;
     border-radius: 3px !important;
     color: var(--arpc-text-input);
-    background: initial !important;
-    background-color: var(--arpc-dark) !important;
+    background-color: initial !important;
+    background: var(--arpc-dark) !important;
     box-shadow: none !important;
     border: none !important;
     transition: border-color 0.2s ease-in-out;
@@ -171,7 +170,7 @@
 }
 
 .arpc-page {
-  background-color: var(--arpc-background);
+  background: var(--arpc-background);
   position: absolute;
   top: 0;
   left: 0;
@@ -248,7 +247,7 @@
   position: fixed;
   z-index: 1;
   top: 0;
-  background-color: var(--arpc-secondary);
+  background: var(--arpc-secondary);
   overflow-x: hidden;
   padding-top: calc(var(--chromeHeight1) + 15px);
   padding-left: 4px;
@@ -282,57 +281,60 @@
     overflow: hidden;
     flex-shrink: 0;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .arpc-sidebar-item:hover {
-    background-color: var(--arpc-sidebar-item-hover);
+    background: var(--arpc-sidebar-item-hover);
     color: var(--arpc-sidebar-item-hover-text);
   }
 
   .arpc-sidebar-item:active {
-    background-color: var(--arpc-sidebar-item-active);
+    background: var(--arpc-sidebar-item-active);
     color: var(--arpc-sidebar-selected-text);
   }
 
   .arpc-sidebar-selected {
-    background-color: var(--arpc-sidebar-selected);
+    background: var(--arpc-sidebar-selected);
     color: var(--arpc-sidebar-selected-text);
     cursor: default;
   }
 
   .arpc-sidebar-selected:hover {
-    background-color: var(--arpc-sidebar-item-hover);
+    background: var(--arpc-sidebar-item-hover);
     color: var(--arpc-sidebar-selected-text);
   }
 
   .arpc-sidebar-selected:active {
-    background-color: var(--arpc-sidebar-item-active);
+    background: var(--arpc-sidebar-item-active);
     color: var(--arpc-sidebar-selected-text);
   }
 
   .arpc-sidebar-blue {
-    background-color: var(--arpc-sidebar-blue);
+    background: var(--arpc-sidebar-blue);
     color: var(--arpc-sidebar-blue-text);
     display: flex;
     justify-content: space-between;
 
     path {
-      background-color: currentColor;
+      background: currentColor;
     }
   }
 
   .arpc-sidebar-blue:hover {
-    background-color: var(--arpc-sidebar-blue-hover);
+    background: var(--arpc-sidebar-blue-hover);
     color: var(--arpc-sidebar-blue-hover-text);
   }
 
   .arpc-sidebar-blue:active {
-    background-color: var(--arpc-sidebar-blue-active);
+    background: var(--arpc-sidebar-blue-active);
     color: var(--arpc-sidebar-blue-active-text);
   }
 
   .arpc-sidebar-separator {
-    background-color: var(--arpc-sidebar-separator);
+    background: var(--arpc-sidebar-separator);
     margin: 8px 7px;
     height: 1px;
   }
@@ -376,7 +378,7 @@
 }
 
 .arpc-unapplied-settings-content {
-  background-color: var(--arpc-dark);
+  background: var(--arpc-dark);
   color: var(--arpc-text-input);
   font-weight: 500;
   display: flex;
@@ -418,7 +420,7 @@
 }
 
 #arpc-update-option {
-  background-color: #202225;
+  background: #202225;
   padding: 20px;
   border-radius: 4px;
   margin-bottom: 20px;
@@ -571,7 +573,7 @@
   height: 40px;
   padding: 6px;
   background: initial;
-  background-color: var(--arpc-dark);
+  background: var(--arpc-dark);
   color: var(--arpc-text-input);
   font-family: inherit;
   font-weight: 500;
@@ -602,7 +604,7 @@
   width: auto;
   min-width: 60px;
   min-height: 32px;
-  transition: background-color 0.17s ease, color 0.17s ease;
+  transition: background 0.17s ease, color 0.17s ease;
 }
 
 .arpc-button-underline {
@@ -614,52 +616,52 @@
 }
 
 .arpc-button-blue {
-  background-color: var(--arpc-button-blue);
+  background: var(--arpc-button-blue);
   color: var(--arpc-button-blue-text);
 }
 
 .arpc-button-blue:hover {
-  background-color: var(--arpc-button-blue-hover);
+  background: var(--arpc-button-blue-hover);
   color: var(--arpc-button-blue-hover-text);
 }
 
 .arpc-button-blue:active {
-  background-color: var(--arpc-button-blue-active);
+  background: var(--arpc-button-blue-active);
   color: var(--arpc-button-blue-active-text);
 }
 
 .arpc-button-green {
-  background-color: var(--arpc-button-green);
+  background: var(--arpc-button-green);
   color: var(--arpc-button-green-text);
 }
 
 .arpc-button-green:hover {
-  background-color: var(--arpc-button-green-hover);
+  background: var(--arpc-button-green-hover);
   color: var(--arpc-button-green-hover-text);
 }
 
 .arpc-button-green:active {
-  background-color: var(--arpc-button-green-active);
+  background: var(--arpc-button-green-active);
   color: var(--arpc-button-green-active-text);
 }
 
 .arpc-button-red {
-  background-color: var(--arpc-button-red);
+  background: var(--arpc-button-red);
   color: var(--arpc-button-red-text);
 }
 
 .arpc-button-red:hover {
-  background-color: var(--arpc-button-red-hover);
+  background: var(--arpc-button-red-hover);
   color: var(--arpc-button-red-hover-text);
 }
 
 .arpc-button-red:active {
-  background-color: var(--arpc-button-red-active);
+  background: var(--arpc-button-red-active);
   color: var(--arpc-button-red-active-text);
 }
 
 .arpc-var-button {
-  background-color: var(--arpc-dark);
+  background: var(--arpc-dark);
   color: var(--arpc-text-input);
   font-weight: 400;
   min-width: 0;
@@ -667,6 +669,38 @@
   padding: 4px;
   margin-top: 5px;
   border-radius: 4px;
+}
+
+.arpc-badge {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 12px;
+  line-height: 16px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  color: #fff;
+  background: var(--arpc-button-red);
+  text-align: center;
+  -webkit-box-flex: 0;
+  border-radius: 8px;
+  padding: 0 6px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: inline;
+}
+
+.arpc-option-with-badge {
+  display: flex;
+  align-items: center;
+
+  .arpc-badge {
+    margin-left: 5px;
+  }
 }
 
 // Modals
@@ -705,7 +739,7 @@
     font-size: 13px;
     word-wrap: break-word;
     margin: 0 auto;
-    background-color: var(--arpc-modal-background);
+    background: var(--arpc-modal-background);
 
     .arpc-modal-header {
       color: var(--arpc-modal-header);
@@ -786,7 +820,7 @@
 
       #arpc-variables div {
         user-select: text;
-        background-color: var(--arpc-modal-variable);
+        background: var(--arpc-modal-variable);
         border-radius: 4px;
         margin-right: 5px;
         margin-bottom: 5px;
@@ -798,7 +832,7 @@
       position: relative;
       padding: 13px;
       border-radius: 0 0 5px 5px;
-      background-color: var(--arpc-modal-secondary);
+      background: var(--arpc-modal-secondary);
       color: var(--arpc-modal-footer-text);
       display: flex;
       align-items: center;
@@ -839,7 +873,7 @@
       }
 
       .arpc-changelog-divider:after {
-        background-color: var(--arpc-changelog-divider);
+        background: var(--arpc-changelog-divider);
         content: "";
         height: 1px;
         flex: 1 1 auto;

@@ -16,17 +16,28 @@ export default Vue.component("arpc-changelog", {
       v-html="changelog"
     ></div>
     <div class="arpc-modal-footer">
-      <div v-if="checkingForUpdate">Checking for updates...</div>
-      <div v-else-if="latestVersion > installedVersion">
-        There is a new update available!<br />Installed version:
-        {{installedVersion}}
+      <div v-if="gettingRemoteData">Checking for updates...</div>
+      <div v-else-if="versionData && versionData.updateAvailable">
+        <div v-if="versionData.footerMessage">
+          {{ versionData.footerMessage }}
+        </div>
+        <div v-else>
+          There is a new update available!<br />Installed version:
+          {{installedVersion}}
+        </div>
       </div>
       <div
         class="arpc-modal-footer-content"
-        v-else-if="latestVersion <= installedVersion"
+        v-else-if="versionData && !versionData.updateAvailable"
       >
-        <div>No update available.</div>
-        <div v-if="!remoteData?.hideLastArtworkUpdate">
+        <div v-if="versionData.footerMessage">
+          {{ versionData.footerMessage }}
+        </div>
+        <div v-else>No update available.</div>
+
+        <div
+          v-if="remoteData?.animatedArtworks && !remoteData?.hideLastArtworkUpdate"
+        >
           <div v-if="gettingAnimatedArtworks">
             Checking animated artworks...
           </div>
@@ -41,7 +52,7 @@ export default Vue.component("arpc-changelog", {
       <div v-else>Error checking for updates.</div>
 
       <button
-        :disabled="checkingForUpdate || !latestVersion || latestVersion <= installedVersion || updating"
+        :disabled="gettingRemoteData || !versionData || !versionData.updateAvailable || updating"
         class="arpc-button arpc-button-blue"
         id="arpc-update-button"
         @click="update()"
@@ -58,11 +69,8 @@ export default Vue.component("arpc-changelog", {
     artworksUpdated: false,
   }),
   computed: {
-    checkingForUpdate() {
-      return Vue.observable(window.AdvancedRpc).checkingForUpdate;
-    },
-    latestVersion() {
-      return Vue.observable(window.AdvancedRpc).latestVersion;
+    versionData() {
+      return Vue.observable(window.AdvancedRpc).versionData;
     },
     gettingAnimatedArtworks() {
       return Vue.observable(window.AdvancedRpc).gettingAnimatedArtworks;
@@ -77,6 +85,9 @@ export default Vue.component("arpc-changelog", {
     remoteData() {
       return Vue.observable(window.AdvancedRpc).remoteData;
     },
+    gettingRemoteData() {
+      return Vue.observable(window.AdvancedRpc).gettingRemoteData;
+    },
     changelog() {
       return Vue.observable(window.AdvancedRpc).changelog;
     },
@@ -85,7 +96,7 @@ export default Vue.component("arpc-changelog", {
     },
   },
   async mounted() {
-    await AdvancedRpc.checkForUpdates();
+    await AdvancedRpc.checkForUpdates("changelog");
   },
   methods: {
     update() {

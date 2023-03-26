@@ -1,0 +1,1 @@
+### The `colors.less` and `data.json` files in this folder are only used in AdvancedRPC 1.6.0 and older versions.

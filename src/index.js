@@ -1,6 +1,8 @@
 const { AutoClient } = require("discord-auto-rpc");
 const { ipcMain } = require("electron");
 const { join } = require("path");
+const fs = require("fs");
+const path = require("path");
 module.exports = class AdvancedRpcBackend {
   constructor(env) {
     this._env = env;
@@ -70,6 +72,16 @@ module.exports = class AdvancedRpcBackend {
     try {
       ipcMain.handle(`plugin.${this.name}.remoteData`, (_event, data) => {
         this.remoteData = data;
+      });
+    } catch {}
+
+    // Initialize colors.less for themes
+    try {
+      const filePath = path.join(this._env.dir, "colors.less");
+      ipcMain.handle(`plugin.${this.name}.colorsless`, (_event, data) => {
+        fs.writeFile(filePath, data, (err) => {
+          if (err) console.log(err);
+        });
       });
     } catch {}
 
