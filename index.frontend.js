@@ -1,4 +1,4 @@
-/* Version: 1.6.0 - March 6, 2023 18:46:32 */
+/* Version: 1.6.1 - March 27, 2023 02:24:23 */
 (function () {
   'use strict';
 
@@ -69,13 +69,11 @@
     <div class="arpc-settings">
       <arpc-sidebar
         :installedVersion="installedVersion"
-        :latestVersion="latestVersion"
+        :versionData="versionData"
         :versionInfo="versionInfo"
         :remoteData="remoteData"
         :frontend="frontend"
-        @sidebar-item="changeSidebarItem"
-        @set-modal="setModal"
-        @set-theme="unlockTheme"
+        @do-action="doAction"
         @click-ee="clickingEe"
       ></arpc-sidebar>
 
@@ -118,9 +116,7 @@
               v-for="bubble in bubbles"
               v-if="bubble?.enabled"
               v-bind="bubble"
-              @sidebar-item="changeSidebarItem"
-              @set-modal="setModal"
-              @set-theme="unlockTheme"
+              @do-action="doAction"
             ></arpc-bubble></div
         ></Transition>
 
@@ -333,16 +329,43 @@
                 :class="{ 'arpc-rumble' : remoteData?.themeClickEe?.id && !frontend[remoteData?.themeClickEe?.id + 'Theme'] }"
                 @click="clickingEe('themeClickEe')"
               >
-                Theme
+                <div class="arpc-option-with-badge">
+                  Theme
+                  <div
+                    v-if="remoteData?.themesBadge?.text"
+                    :style="{background: remoteData?.themesBadge?.color, color: remoteData?.themesBadge?.textColor}"
+                    class="arpc-badge"
+                  >
+                    {{ remoteData?.themesBadge?.text }}
+                  </div>
+                </div>
                 <small
                   v-if="themes.find(t => t.id === frontend.theme)?.description"
                 >
                   {{ themes.find(t => t.id === frontend.theme).description }}
                 </small>
               </div>
+
               <div class="arpc-option-segment arpc-option-segment_auto">
                 <label>
-                  <select class="arpc-select" v-model="frontend.theme">
+                  <select
+                    v-if="remoteData?.categorizedThemes"
+                    class="arpc-select"
+                    v-model="frontend.theme"
+                  >
+                    <option value="" disabled hidden>Select Theme</option>
+                    <optgroup
+                      v-for="(themes, key) in filteredCategorizedThemes"
+                      :label="key"
+                      v-if="themes.length > 0"
+                    >
+                      <option v-for="theme in themes" :value="theme.id">
+                        {{ theme.name }}
+                      </option>
+                    </optgroup>
+                  </select>
+
+                  <select v-else class="arpc-select" v-model="frontend.theme">
                     <option value="" disabled hidden>Select Theme</option>
                     <option v-for="theme in themes" :value="theme.id">
                       {{ theme.name }}
@@ -548,14 +571,12 @@
         removePause: "0"
       },
       installedVersion: AdvancedRpc.installedVersion,
-      latestVersion: AdvancedRpc.latestVersion,
       unappliedSettings: AdvancedRpc.unappliedSettings,
-      versionInfo: "ARPC 1.6.0 - March 6, 2023 18:46:32",
+      versionInfo: "ARPC 1.6.1 - March 27, 2023 02:24:23",
       textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
       urlVariables: "{appleMusicUrl}, {ciderUrl}",
       variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
       modal: "",
-      remoteData: AdvancedRpc.remoteData,
       privateSessionBubble: {
         enabled: true,
         message: "Private Session is currently enabled, your Discord presence won't be displayed.",
@@ -574,8 +595,21 @@
         bubblesExpanded: true
       },
       themes: [],
+      filteredCategorizedThemes: {},
       bubbles: []
     }),
+    computed: {
+      remoteData() {
+        const data = Vue.observable(window.AdvancedRpc).remoteData;
+        this.initBubbles(data?.bubbles);
+        if (data?.themes) this.themes = Object.values(data.themes).flat();
+        this.setTheme(this.frontend.theme, data);
+        return data;
+      },
+      versionData() {
+        return Vue.observable(window.AdvancedRpc).versionData;
+      }
+    },
     watch: {
       settings: {
         handler() {
@@ -583,14 +617,14 @@
           if (this.settings["imageSize"] < 0) this.settings["imageSize"] = 1;
           AdvancedRpc.setSettings(this.settings);
           ipcRenderer.invoke(`plugin.${AdvancedRpc.PLUGIN_NAME}.setting`, this.settings);
-          this.initBubbles();
+          this.initBubbles(this.remoteData?.bubbles);
         },
         deep: true
       },
       frontend: {
         handler() {
           AdvancedRpc.setFrontendData(this.frontend);
-          this.setTheme(this.frontend.theme);
+          this.setTheme(this.frontend.theme, this.remoteData);
         },
         deep: true
       }
@@ -600,8 +634,8 @@
       let frontend = AdvancedRpc.getFrontendData();
       if (typeof frontend["bubblesExpanded"] === "undefined") frontend["bubblesExpanded"] = true;
       this.frontend = frontend;
-      this.setTheme(frontend.theme);
-      this.initBubbles();
+      this.setTheme(frontend.theme, this.remoteData);
+      this.initBubbles(this.remoteData?.bubbles);
     },
     async mounted() {
       ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.unappliedSettings`, (e, status) => {
@@ -612,6 +646,7 @@
         this.settings = settings;
       });
       document.onkeydown = this.checkKey;
+      if (!this.remoteData?.dontTriggerApiOnMount) await AdvancedRpc.checkForUpdates("arpc");
     },
     methods: {
       receiveSettings(key, settings) {
@@ -651,11 +686,27 @@
         this.frontend.sidebar = item;
         document.querySelector(".arpc-page").scrollIntoView();
       },
+      async doAction(item) {
+        if (item.dest) item = item.dest;
+        if (item.startsWith("arpc.")) {
+          this.changeSidebarItem(item.replace("arpc.", ""));
+        } else if (item.startsWith("modal.")) {
+          this.setModal(item.replace("modal.", ""));
+        } else if (item.startsWith("theme.")) {
+          const prevTheme = this.frontend.theme;
+          this.setTheme(item.replace("theme.", ""), this.remoteData);
+          if (prevTheme !== item.replace("theme.", "")) this.reportThemeUnlock(item.replace("theme.", ""));
+        } else if (item.startsWith("unlockTheme.")) {
+          this.unlockTheme(item.replace("unlockTheme.", ""));
+        } else {
+          this.openLink(item);
+        }
+      },
       openLink(url) {
         window.open(url, "_blank");
       },
-      setTheme(theme) {
-        this.themes = this.remoteData?.themes;
+      setTheme(theme, remoteData) {
+        if (remoteData?.themes) this.themes = Object.values(remoteData.themes).flat();else this.themes = [];
         this.themes = this.themes?.filter(t => {
           if (t.requirement) {
             return this.frontend[t.requirement];
@@ -663,10 +714,20 @@
             return true;
           }
         });
-        if (this.remoteData?.forceTheme) {
-          document.querySelector(".advancedrpc")?.setAttribute("arpc-theme", this.remoteData.forceTheme);
+        if (remoteData?.themes) Object.keys(remoteData.themes).forEach(key => {
+          this.filteredCategorizedThemes[key] = remoteData.themes[key].filter(t => {
+            if (t.requirement) {
+              return this.frontend[t.requirement];
+            } else {
+              return true;
+            }
+          });
+        });
+        if (remoteData?.forceTheme) {
+          document.querySelector(".advancedrpc")?.setAttribute("arpc-theme", remoteData.forceTheme);
         } else if (this.themes?.find(t => t.id === theme)) {
           document.querySelector(".advancedrpc")?.setAttribute("arpc-theme", theme);
+          this.frontend.theme = theme;
         } else {
           document.querySelector(".advancedrpc")?.setAttribute("arpc-theme", "dark");
           this.frontend.theme = "dark";
@@ -698,23 +759,27 @@
         }
       },
       unlockTheme(theme) {
+        const prevTheme = this.frontend.theme;
         this.frontend[theme + "Theme"] = true;
         this.frontend.theme = theme;
-        this.setTheme(theme);
+        this.setTheme(theme, this.remoteData);
+        if (prevTheme !== theme) this.reportThemeUnlock(theme);
       },
-      checkVersions(param) {
-        if (param.versions && !param.versions.includes(AdvancedRpc.installedVersion)) {
-          return false;
-        } else if (param.versionsSmallerThan && AdvancedRpc.installedVersion >= param.versionsSmallerThan) {
-          return false;
-        } else {
-          return true;
-        }
+      async reportThemeUnlock(theme) {
+        try {
+          await fetch(`https://dev-api.imvasi.com/theme?version=${this.installedVersion}&theme=${theme}
+        `, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            }
+          });
+        } catch {}
       },
-      initBubbles() {
+      initBubbles(data) {
         let bubbles = [];
-        this.remoteData?.bubbles?.forEach(bubble => {
-          if (this.checkVersions(bubble)) bubbles.push(bubble);
+        data?.forEach(bubble => {
+          if (bubble.enabled) bubbles.push(bubble);
         });
         if (app.cfg.general.privateEnabled && this.settings.respectPrivateSession) bubbles.push(undefined);
         if (app.cfg.connectivity.discord_rpc.enabled) bubbles.push(undefined);
@@ -738,12 +803,12 @@
   });
 
   Vue.component("arpc-bubble", {
-    props: ["enabled", "message", "url", "icon", "color", "backgroundColor", "textColor", "iconColor", "versions", "versionsSmallerThan"],
+    props: ["enabled", "message", "url", "icon", "color", "backgroundColor", "textColor", "iconColor"],
     template: `
   <div
   class="arpc-bubble"
   :style="{'border-color': color, 'background': backgroundColor || color + '1a', 'cursor': url ? 'pointer' : 'default'}"
-  @click="url && doAction(url)"
+  @click="url && $emit('do-action', url)"
 >
   <div v-if="icon" class="arpc-bubble-icon">
     <svg
@@ -793,20 +858,7 @@
   </div>
 </div>
 
-  `,
-    methods: {
-      doAction(item) {
-        if (item.startsWith("arpc.")) {
-          this.$emit("sidebar-item", item.replace("arpc.", ""));
-        } else if (item.startsWith("modal.")) {
-          this.$emit("set-modal", item.replace("modal.", ""));
-        } else if (item.startsWith("theme.")) {
-          this.$emit("set-theme", item.replace("theme.", ""));
-        } else {
-          window.open(item, "_blank");
-        }
-      }
-    }
+  `
   });
 
   Vue.component("arpc-changelog", {
@@ -827,17 +879,28 @@
       v-html="changelog"
     ></div>
     <div class="arpc-modal-footer">
-      <div v-if="checkingForUpdate">Checking for updates...</div>
-      <div v-else-if="latestVersion > installedVersion">
-        There is a new update available!<br />Installed version:
-        {{installedVersion}}
+      <div v-if="gettingRemoteData">Checking for updates...</div>
+      <div v-else-if="versionData && versionData.updateAvailable">
+        <div v-if="versionData.footerMessage">
+          {{ versionData.footerMessage }}
+        </div>
+        <div v-else>
+          There is a new update available!<br />Installed version:
+          {{installedVersion}}
+        </div>
       </div>
       <div
         class="arpc-modal-footer-content"
-        v-else-if="latestVersion <= installedVersion"
+        v-else-if="versionData && !versionData.updateAvailable"
       >
-        <div>No update available.</div>
-        <div v-if="!remoteData?.hideLastArtworkUpdate">
+        <div v-if="versionData.footerMessage">
+          {{ versionData.footerMessage }}
+        </div>
+        <div v-else>No update available.</div>
+
+        <div
+          v-if="remoteData?.animatedArtworks && !remoteData?.hideLastArtworkUpdate"
+        >
           <div v-if="gettingAnimatedArtworks">
             Checking animated artworks...
           </div>
@@ -852,7 +915,7 @@
       <div v-else>Error checking for updates.</div>
 
       <button
-        :disabled="checkingForUpdate || !latestVersion || latestVersion <= installedVersion || updating"
+        :disabled="gettingRemoteData || !versionData || !versionData.updateAvailable || updating"
         class="arpc-button arpc-button-blue"
         id="arpc-update-button"
         @click="update()"
@@ -869,11 +932,8 @@
       artworksUpdated: false
     }),
     computed: {
-      checkingForUpdate() {
-        return Vue.observable(window.AdvancedRpc).checkingForUpdate;
-      },
-      latestVersion() {
-        return Vue.observable(window.AdvancedRpc).latestVersion;
+      versionData() {
+        return Vue.observable(window.AdvancedRpc).versionData;
       },
       gettingAnimatedArtworks() {
         return Vue.observable(window.AdvancedRpc).gettingAnimatedArtworks;
@@ -888,6 +948,9 @@
       remoteData() {
         return Vue.observable(window.AdvancedRpc).remoteData;
       },
+      gettingRemoteData() {
+        return Vue.observable(window.AdvancedRpc).gettingRemoteData;
+      },
       changelog() {
         return Vue.observable(window.AdvancedRpc).changelog;
       },
@@ -896,7 +959,7 @@
       }
     },
     async mounted() {
-      await AdvancedRpc.checkForUpdates();
+      await AdvancedRpc.checkForUpdates("changelog");
     },
     methods: {
       update() {
@@ -1032,38 +1095,50 @@
   <div>
     <div class="arpc-header">
       <h1 @click="$emit('click-ee', 'headerClickEe')">
-        {{ remoteData?.header ?? "AdvancedRPC" }}
+        {{ computedRemoteData?.header ?? "AdvancedRPC" }}
       </h1>
       <img
         @click="$emit('click-ee', 'decorationClickEe')"
-        v-if="remoteData?.titleDecorations?.rightImage"
-        :src="remoteData?.titleDecorations?.rightImage"
-        :title="remoteData?.titleDecorations?.rightImageText"
-        width="40"
-        height="40"
+        v-if="computedRemoteData?.titleDecoration?.url"
+        :src="computedRemoteData?.titleDecoration?.url"
+        :title="computedRemoteData?.titleDecoration?.text"
+        :width="computedRemoteData?.titleDecoration?.width ?? 40"
+        :height="computedRemoteData?.titleDecoration?.height ?? 40"
         draggable="false"
       />
     </div>
 
     <div
       v-for="item in sideBarItems?.upper"
-      v-if="checkVersions(item)"
-      :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
-      @click="doAction(item)"
+      :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && versionData?.updateAvailable}"
+      @click="$emit('do-action', item)"
     >
-      {{ item.dest === 'modal.changelog' && installedVersion < latestVersion ?
+      {{ item.dest === 'modal.changelog' && versionData?.updateAvailable ?
       item.updateText : item.text }}
+      <div
+        v-if="item.badge?.text"
+        :style="{background: item.badge?.color, color: item.badge?.textColor}"
+        class="arpc-badge"
+      >
+        {{ item.badge?.text }}
+      </div>
     </div>
   </div>
   <div>
     <div
       v-for="item in sideBarItems?.lower"
-      v-if="checkVersions(item)"
-      :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && installedVersion < latestVersion}"
-      @click="doAction(item)"
+      :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && versionData?.updateAvailable}"
+      @click="$emit('do-action', item)"
     >
-      {{ item.dest === 'modal.changelog' && installedVersion < latestVersion ?
+      {{ item.dest === 'modal.changelog' && versionData?.updateAvailable ?
       item.updateText : item.text }}
+      <div
+        v-if="item.badge?.text"
+        :style="{background: item.badge?.color, color: item.badge?.textColor}"
+        class="arpc-badge"
+      >
+        {{ item.badge?.text }}
+      </div>
     </div>
 
     <footer @click="openLink('https://github.com/down-bad/advanced-rpc')">
@@ -1073,66 +1148,56 @@
 </div>
 
 `,
-    props: ["installedVersion", "latestVersion", "versionInfo", "remoteData", "frontend"],
+    props: ["installedVersion", "versionData", "versionInfo", "remoteData", "frontend"],
     data: () => ({
       sideBarItems: null
     }),
-    created() {
-      this.sideBarItems = this.remoteData?.sideBarItems;
-      if (!this.sideBarItems) {
-        this.sideBarItems = {
-          upper: [{
-            text: "General",
-            dest: "arpc.general",
-            id: "general"
-          }, {
-            text: "Videos",
-            dest: "arpc.videos",
-            id: "videos"
-          }, {
-            text: "Radio Stations",
-            dest: "arpc.radio",
-            id: "radio"
-          }, {
-            text: "Podcasts",
-            dest: "arpc.podcasts",
-            id: "podcasts"
-          }, {
-            text: "Settings",
-            dest: "arpc.settings",
-            id: "settings"
-          }],
-          lower: [{
-            text: "Changelog",
-            updateText: "Update available!",
-            dest: "modal.changelog"
-          }]
-        };
+    computed: {
+      computedRemoteData() {
+        const data = Vue.observable(this.remoteData);
+        this.sidebarItems(data);
+        return data;
       }
     },
+    created() {
+      this.sidebarItems(this.computedRemoteData);
+    },
     methods: {
-      doAction(item) {
-        if (item.dest.startsWith("arpc.")) {
-          this.$emit("sidebar-item", item.id);
-        } else if (item.dest.startsWith("modal.")) {
-          this.$emit("set-modal", item.dest.replace("modal.", ""));
-        } else if (item.dest.startsWith("theme.")) {
-          this.$emit("set-theme", item.dest.replace("theme.", ""));
-        } else {
-          this.openLink(item.dest);
+      sidebarItems(remoteData) {
+        this.sideBarItems = remoteData?.sideBarItems;
+        if (!this.sideBarItems) {
+          this.sideBarItems = {
+            upper: [{
+              text: "General",
+              dest: "arpc.general",
+              id: "general"
+            }, {
+              text: "Videos",
+              dest: "arpc.videos",
+              id: "videos"
+            }, {
+              text: "Radio Stations",
+              dest: "arpc.radio",
+              id: "radio"
+            }, {
+              text: "Podcasts",
+              dest: "arpc.podcasts",
+              id: "podcasts"
+            }, {
+              text: "Settings",
+              dest: "arpc.settings",
+              id: "settings"
+            }],
+            lower: [{
+              text: "Changelog",
+              updateText: "Update available!",
+              dest: "modal.changelog"
+            }]
+          };
         }
       },
       openLink(url) {
         window.open(url, "_blank");
-      },
-      checkVersions(param) {
-        if (param.versions && !param.versions.includes(AdvancedRpc.installedVersion)) {
-          return false;
-        } else if (param.versionsSmallerThan && AdvancedRpc.installedVersion >= param.versionsSmallerThan) {
-          return false;
-        } else {
-          return true;
-        }
       }
     }
   });
@@ -2867,17 +2932,18 @@
     SETTINGS_KEY = "settings";
     FRONTEND_KEY = "frontend";
     remoteData = null;
-    installedVersion = "1.6.0";
-    latestVersion = undefined;
+    versionData = null;
+    installedVersion = "1.6.1";
     changelog = undefined;
     unappliedSettings = false;
     updateInProgress = false;
     artworksUpdate = null;
+    isDev = false;
     checkingForUpdate = false;
     gettingRemoteData = false;
     gettingChangelog = false;
-    gettingLatestVersion = false;
     gettingAnimatedArtworks = false;
+    gettingColorsless = false;
     constructor() {
       console.log(`[Plugin][${this.PLUGIN_NAME}] Frontend established.`);
       CiderFrontAPI.StyleSheets.Add("./plugins/gh_510140500/advancedrpc.less");
@@ -2890,7 +2956,7 @@
       CiderFrontAPI.AddMenuEntry(menuEntry);
       this.initSettings();
       ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.initSettings`, this.getSettings());
-      this.checkForUpdates(this.init = true);
+      this.checkForUpdates("startup");
     }
 
     // Gets settings from localStorage or sets default settings if none are found
@@ -2900,7 +2966,11 @@
         if (!data) {
           this.setDefaultSettings();
           return this.getSettings();
-        } else return JSON.parse(data);
+        } else {
+          const arpcSettings = JSON.parse(data);
+          if (arpcSettings.videos.pause.button2.url === "%DEVMODE%") this.isDev = true;else this.isDev = false;
+          return arpcSettings;
+        }
       } catch (error) {
         return null;
       }
@@ -3238,54 +3308,63 @@
     setFrontendData(data) {
       localStorage.setItem(`plugin.${this.PLUGIN_NAME}.${this.FRONTEND_KEY}`, JSON.stringify(data));
     }
-    async getRemoteData() {
+    async getRemoteData(src) {
       if (!this.gettingRemoteData) {
         this.gettingRemoteData = true;
+        const frontend = await this.getFrontendData();
         try {
-          this.remoteData = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/data.json").then(response => response.json());
+          this.remoteData = await fetch(`https://${this.isDev ? "dev" : "arpc"}-api.imvasi.com/getRemoteData?src=${src}&version=${this.installedVersion}&theme=${frontend.theme}
+            `).then(response => {
+            if (response.status === 200) return response.json();else return null;
+          });
           ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.remoteData`, this.remoteData);
+          if (this.remoteData?.versionData) {
+            this.versionData = this.remoteData.versionData;
+            if (this.versionData.updateAvailable && this.versionData.updateNotif) {
+              const updateNotyf = notyf.error({
+                message: this.versionData.updateNotif.message || "There is a new AdvancedRPC version available!",
+                icon: false,
+                background: this.versionData.updateNotif.color || "#5865f2",
+                duration: this.versionData.updateNotif.duration || "5000",
+                dismissible: true
+              });
+              updateNotyf.on("click", ({
+                target,
+                event
+              }) => {
+                app.appRoute("plugin/advancedrpc");
+              });
+            }
+          } else {
+            this.versionData = null;
+          }
           this.gettingRemoteData = false;
           return true;
         } catch (e) {
           console.log(`[Plugin][${this.PLUGIN_NAME}] Error fetching remote data. Some features may not work.`);
           console.log(e);
+          this.remoteData = null;
+          this.versionData = null;
           this.gettingRemoteData = false;
           return false;
         }
       }
     }
-    async getLatestVersion(init) {
-      if (!this.gettingLatestVersion) {
-        this.gettingLatestVersion = true;
+    async getColorsless(src) {
+      if (!this.gettingColorsless) {
+        this.gettingColorsless = true;
         try {
-          const {
-            version
-          } = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/main/package.json").then(async response => response.json());
-          if (version > this.installedVersion && init) {
-            const updateNotyf = notyf.error({
-              message: "There is a new AdvancedRPC version available!",
-              icon: false,
-              background: "#5865f2",
-              duration: "5000",
-              dismissible: true
-            });
-            updateNotyf.on("click", ({
-              target,
-              event
-            }) => {
-              app.appRoute("plugin/advancedrpc");
-            });
-          }
-          this.latestVersion = version;
-          this.gettingLatestVersion = false;
-          this.checkingForUpdate = false;
+          const colorsless = await fetch(`https://${this.isDev ? "dev" : "arpc"}-api.imvasi.com/getColorsless?src=${src}&version=${this.installedVersion}
+            `).then(async response => {
+            if (response.status === 200) return response.text();else return null;
+          });
+          if (colorsless) ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.colorsless`, colorsless);
+          this.gettingColorsless = false;
           return true;
         } catch (e) {
-          console.log(`[Plugin][${this.PLUGIN_NAME}] Error checking for updates.`);
+          console.log(`[Plugin][${this.PLUGIN_NAME}] Error getting theme styles.`);
           console.log(e);
-          this.latestVersion = null;
-          this.gettingLatestVersion = false;
-          this.checkingForUpdate = false;
+          this.gettingColorsless = false;
           return false;
         }
       }
@@ -3307,30 +3386,22 @@
         }
       }
     }
-    async getAnimatedArtworks(init) {
+    async getAnimatedArtworks(src) {
       if (!this.gettingAnimatedArtworks) {
-        this.gettingAnimatedArtworks = true;
         try {
           if (this.remoteData?.animatedArtworks) {
-            let artworks = await fetch(`https://arpc-api.imvasi.com/getArtworks?startup=${init ?? "false"}`, {
+            this.gettingAnimatedArtworks = true;
+            let artworks = await fetch(`https://${this.isDev ? "dev" : "arpc"}-api.imvasi.com/getArtworks?src=${src}&version=${this.installedVersion}`, {
               cache: "no-store"
             }).then(response => {
               if (response.status === 200) {
                 this.artworksUpdate = response.headers.get("Last-Modified");
                 return response.json();
-              }
+              } else return null;
             });
-            if (!artworks || !Object.keys(artworks).length) {
-              artworks = await fetch("https://files.imvasi.com/arpc/artworks.json", {
-                cache: "no-store"
-              }).then(response => {
-                this.artworksUpdate = response.headers.get("Last-Modified");
-                return response.json();
-              });
-            }
+            this.gettingAnimatedArtworks = false;
             if (artworks) {
               ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.artworks`, artworks);
-              this.gettingAnimatedArtworks = false;
               return true;
             }
           }
@@ -3342,11 +3413,12 @@
         }
       }
     }
-    async checkForUpdates(init) {
+    async checkForUpdates(src) {
       this.checkingForUpdate = true;
-      await this.getRemoteData();
-      const promises = [this.getLatestVersion(init), this.getAnimatedArtworks(init), this.getChangelog()];
+      await this.getRemoteData(src);
+      const promises = [this.getAnimatedArtworks(src), this.getChangelog(), this.getColorsless(src)];
       await Promise.allSettled(promises);
+      CiderFrontAPI.StyleSheets.Add("./plugins/gh_510140500/advancedrpc.less");
     }
     async update() {
       AdvancedRpc.updateInProgress = true;

@@ -1,34 +1,34 @@
-/* Version: 1.6.0 - March 6, 2023 18:46:32 */
+/* Version: 1.6.1 - March 27, 2023 02:24:22 */
 'use strict';
 
-var require$$0$1 = require('fs');
-var require$$0 = require('path');
-var require$$0$3 = require('events');
+var require$$0 = require('fs');
+var require$$2$1 = require('path');
+var require$$0$2 = require('events');
 var require$$1$1 = require('timers');
 var Stream = require('stream');
 var http = require('http');
 var Url = require('url');
-var require$$0$2 = require('punycode');
+var require$$0$1 = require('punycode');
 var https = require('https');
 var zlib = require('zlib');
-var require$$0$4 = require('net');
+var require$$0$3 = require('net');
 var require$$4 = require('tls');
 var require$$5 = require('crypto');
 var require$$1$2 = require('electron');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
-var require$$0__default$1 = /*#__PURE__*/_interopDefaultLegacy(require$$0$1);
 var require$$0__default = /*#__PURE__*/_interopDefaultLegacy(require$$0);
-var require$$0__default$3 = /*#__PURE__*/_interopDefaultLegacy(require$$0$3);
+var require$$2__default = /*#__PURE__*/_interopDefaultLegacy(require$$2$1);
+var require$$0__default$2 = /*#__PURE__*/_interopDefaultLegacy(require$$0$2);
 var require$$1__default = /*#__PURE__*/_interopDefaultLegacy(require$$1$1);
 var Stream__default = /*#__PURE__*/_interopDefaultLegacy(Stream);
 var http__default = /*#__PURE__*/_interopDefaultLegacy(http);
 var Url__default = /*#__PURE__*/_interopDefaultLegacy(Url);
-var require$$0__default$2 = /*#__PURE__*/_interopDefaultLegacy(require$$0$2);
+var require$$0__default$1 = /*#__PURE__*/_interopDefaultLegacy(require$$0$1);
 var https__default = /*#__PURE__*/_interopDefaultLegacy(https);
 var zlib__default = /*#__PURE__*/_interopDefaultLegacy(zlib);
-var require$$0__default$4 = /*#__PURE__*/_interopDefaultLegacy(require$$0$4);
+var require$$0__default$3 = /*#__PURE__*/_interopDefaultLegacy(require$$0$3);
 var require$$4__default = /*#__PURE__*/_interopDefaultLegacy(require$$4);
 var require$$5__default = /*#__PURE__*/_interopDefaultLegacy(require$$5);
 var require$$1__default$1 = /*#__PURE__*/_interopDefaultLegacy(require$$1$2);
@@ -73,7 +73,7 @@ function requireFileUriToPath() {
    * Module dependencies.
    */
 
-  var sep = require$$0__default["default"].sep || '/';
+  var sep = require$$2__default["default"].sep || '/';
 
   /**
    * Module exports.
@@ -137,8 +137,8 @@ function requireBindings() {
   if (hasRequiredBindings) return bindings.exports;
   hasRequiredBindings = 1;
   (function (module, exports) {
-    var fs = require$$0__default$1["default"],
-      path = require$$0__default["default"],
+    var fs = require$$0__default["default"],
+      path = require$$2__default["default"],
       fileURLToPath = requireFileUriToPath(),
       join = path.join,
       dirname = path.dirname,
@@ -78226,7 +78226,7 @@ var require$$1 = [
 	]
 ];
 
-var punycode = require$$0__default$2["default"];
+var punycode = require$$0__default$1["default"];
 var mappingTable = require$$1;
 var PROCESSING_OPTIONS = {
   TRANSITIONAL: 0,
@@ -78388,7 +78388,7 @@ tr46.PROCESSING_OPTIONS = PROCESSING_OPTIONS;
 
 (function (module) {
 
-  const punycode = require$$0__default$2["default"];
+  const punycode = require$$0__default$1["default"];
   const tr46$1 = tr46;
   const specialSchemes = {
     ftp: 21,
@@ -81477,8 +81477,8 @@ var require$$2 = /*@__PURE__*/getAugmentedNamespace(lib);
 
 var ipc = {exports: {}};
 
-const net = require$$0__default$4["default"];
-const EventEmitter$2 = require$$0__default$3["default"];
+const net = require$$0__default$3["default"];
+const EventEmitter$2 = require$$0__default$2["default"];
 const fetch$1 = require$$2;
 const {
   uuid: uuid$1
@@ -83642,10 +83642,10 @@ var hasRequiredWebsocket;
 function requireWebsocket() {
   if (hasRequiredWebsocket) return websocket$1;
   hasRequiredWebsocket = 1;
-  const EventEmitter = require$$0__default$3["default"];
+  const EventEmitter = require$$0__default$2["default"];
   const https = https__default["default"];
   const http = http__default["default"];
-  const net = require$$0__default$4["default"];
+  const net = require$$0__default$3["default"];
   const tls = require$$4__default["default"];
   const {
     randomBytes,
@@ -84842,7 +84842,7 @@ var hasRequiredWebsocketServer;
 function requireWebsocketServer() {
   if (hasRequiredWebsocketServer) return websocketServer;
   hasRequiredWebsocketServer = 1;
-  const EventEmitter = require$$0__default$3["default"];
+  const EventEmitter = require$$0__default$2["default"];
   const http = http__default["default"];
   const {
     createHash
@@ -85221,7 +85221,7 @@ function requireWs() {
   return ws;
 }
 
-const EventEmitter$1 = require$$0__default$3["default"];
+const EventEmitter$1 = require$$0__default$2["default"];
 const {
   browser
 } = constants$1;
@@ -85292,7 +85292,7 @@ var transports$1 = {
   websocket: websocket
 };
 
-const EventEmitter = require$$0__default$3["default"];
+const EventEmitter = require$$0__default$2["default"];
 const {
   setTimeout: setTimeout$1,
   clearTimeout: clearTimeout$1
@@ -86109,7 +86109,9 @@ const {
 } = require$$1__default$1["default"];
 const {
   join
-} = require$$0__default["default"];
+} = require$$2__default["default"];
+const fs = require$$0__default["default"];
+const path = require$$2__default["default"];
 var src = class AdvancedRpcBackend {
   constructor(env) {
     this._env = env;
@@ -86117,7 +86119,7 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.6.0";
+    this.version = "1.6.1";
     this.author = "down-bad (Vasilis#1517)";
     this._client = null;
     this.init = false;
@@ -86165,6 +86167,16 @@ var src = class AdvancedRpcBackend {
     try {
       ipcMain.handle(`plugin.${this.name}.remoteData`, (_event, data) => {
         this.remoteData = data;
+      });
+    } catch {}
+
+    // Initialize colors.less for themes
+    try {
+      const filePath = path.join(this._env.dir, "colors.less");
+      ipcMain.handle(`plugin.${this.name}.colorsless`, (_event, data) => {
+        fs.writeFile(filePath, data, err => {
+          if (err) console.log(err);
+        });
       });
     } catch {}
 
