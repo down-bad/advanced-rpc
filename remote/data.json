@@ -1,13 +1,4 @@
 {
-  "bubbles": [
-    {
-      "enabled": true,
-      "message": "The {year} variable is not working as intended in this version and will be fixed with the next update.",
-      "color": "#f05d3c",
-      "icon": "info",
-      "versions": ["1.5.0"]
-    }
-  ],
   "sideBarItems": {
     "upper": [
       {
@@ -40,10 +31,6 @@
       }
     ],
     "lower": [
-      {
-        "text": "Request animated artwork",
-        "dest": "https://docs.google.com/forms/d/e/1FAIpQLSdW0VKj-MdvMSlV59jR-Ti2hctR1dgQAcL86c88JJB5AYvbdQ/viewform"
-      },
       {
         "text": "Report an issue",
         "dest": "https://github.com/down-bad/advanced-rpc/issues/new"
@@ -79,30 +66,5 @@
       "requirement": "redblueTheme"
     }
   ],
-  "UNUSED-themeClickEe": {
-    "id": "black",
-    "silentClicks": 3,
-    "clicks": 9,
-    "clickText": "You hear a rumble! Knock {clicks} more times...",
-    "unlockText": "Brave one, the path to darkness opens!",
-    "color": "#111315"
-  },
-  "themeClickEe": {
-    "id": "redblue",
-    "silentClicks": 9,
-    "clicks": 9
-  },
-  "unappliedTextEe": {
-    "id": "purple",
-    "silentClicks": 9,
-    "clicks": 9
-  },
-  "UNUSED-enableArpcSwitchEe": {
-    "id": "redblue",
-    "silentClicks": 3,
-    "clicks": 9,
-    "clickText": "Who knows, if you do that {clicks} more times maybe something will happen...",
-    "color": "#1d2537"
-  },
   "animatedArtworks": true
 }
