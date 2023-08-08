@@ -1,4 +1,4 @@
-/* Version: 1.6.1 - March 27, 2023 02:24:22 */
+/* Version: 1.7.0 - August 9, 2023 02:26:51 */
 'use strict';
 
 var require$$0 = require('fs');
@@ -81210,6 +81210,19 @@ const isDomainOrSubdomain = function isDomainOrSubdomain(destination, original) 
 };
 
 /**
+ * isSameProtocol reports whether the two provided URLs use the same protocol.
+ *
+ * Both domains must already be in canonical form.
+ * @param {string|URL} original
+ * @param {string|URL} destination
+ */
+const isSameProtocol = function isSameProtocol(destination, original) {
+  const orig = new URL$1$1(original).protocol;
+  const dest = new URL$1$1(destination).protocol;
+  return orig === dest;
+};
+
+/**
  * Fetch function
  *
  * @param   Mixed    url   Absolute url or Request instance
@@ -81235,7 +81248,7 @@ function fetch$2(url, opts) {
       let error = new AbortError('The user aborted a request.');
       reject(error);
       if (request.body && request.body instanceof Stream__default["default"].Readable) {
-        request.body.destroy(error);
+        destroyStream(request.body, error);
       }
       if (!response || !response.body) return;
       response.body.emit('error', error);
@@ -81270,8 +81283,38 @@ function fetch$2(url, opts) {
     }
     req.on('error', function (err) {
       reject(new FetchError(`request to ${request.url} failed, reason: ${err.message}`, 'system', err));
+      if (response && response.body) {
+        destroyStream(response.body, err);
+      }
       finalize();
     });
+    fixResponseChunkedTransferBadEnding(req, function (err) {
+      if (signal && signal.aborted) {
+        return;
+      }
+      if (response && response.body) {
+        destroyStream(response.body, err);
+      }
+    });
+
+    /* c8 ignore next 18 */
+    if (parseInt(process.version.substring(1)) < 14) {
+      // Before Node.js 14, pipeline() does not fully support async iterators and does not always
+      // properly handle when the socket close/end events are out of order.
+      req.on('socket', function (s) {
+        s.addListener('close', function (hadError) {
+          // if a data listener is still present we didn't end cleanly
+          const hasDataListener = s.listenerCount('data') > 0;
+
+          // if end happened before close but the socket didn't emit an error, do it now
+          if (response && hasDataListener && !hadError && !(signal && signal.aborted)) {
+            const err = new Error('Premature close');
+            err.code = 'ERR_STREAM_PREMATURE_CLOSE';
+            response.body.emit('error', err);
+          }
+        });
+      });
+    }
     req.on('response', function (res) {
       clearTimeout(reqTimeout);
       const headers = createHeadersLenient(res.headers);
@@ -81341,7 +81384,7 @@ function fetch$2(url, opts) {
               timeout: request.timeout,
               size: request.size
             };
-            if (!isDomainOrSubdomain(request.url, locationURL)) {
+            if (!isDomainOrSubdomain(request.url, locationURL) || !isSameProtocol(request.url, locationURL)) {
               for (const name of ['authorization', 'www-authenticate', 'cookie', 'cookie2']) {
                 requestOpts.headers.delete(name);
               }
@@ -81433,6 +81476,13 @@ function fetch$2(url, opts) {
           response = new Response(body, response_options);
           resolve(response);
         });
+        raw.on('end', function () {
+          // some old IIS servers return zero-length OK deflate responses, so 'data' is never emitted.
+          if (!response) {
+            response = new Response(body, response_options);
+            resolve(response);
+          }
+        });
         return;
       }
 
@@ -81451,6 +81501,39 @@ function fetch$2(url, opts) {
     writeToStream(req, request);
   });
 }
+function fixResponseChunkedTransferBadEnding(request, errorCallback) {
+  let socket;
+  request.on('socket', function (s) {
+    socket = s;
+  });
+  request.on('response', function (response) {
+    const headers = response.headers;
+    if (headers['transfer-encoding'] === 'chunked' && !headers['content-length']) {
+      response.once('close', function (hadError) {
+        // tests for socket presence, as in some situations the
+        // the 'socket' event is not triggered for the request
+        // (happens in deno), avoids `TypeError`
+        // if a data listener is still present we didn't end cleanly
+        const hasDataListener = socket && socket.listenerCount('data') > 0;
+        if (hasDataListener && !hadError) {
+          const err = new Error('Premature close');
+          err.code = 'ERR_STREAM_PREMATURE_CLOSE';
+          errorCallback(err);
+        }
+      });
+    }
+  });
+}
+function destroyStream(stream, err) {
+  if (stream.destroy) {
+    stream.destroy(err);
+  } else {
+    // node < 8
+    stream.emit('error', err);
+    stream.end();
+  }
+}
+
 /**
  * Redirect code matching
  *
@@ -86119,7 +86202,7 @@ var src = class AdvancedRpcBackend {
     this._store = env.utils.getStore();
     this.name = "AdvancedRPC";
     this.description = "Fully customizable Discord Rich Presence for Cider";
-    this.version = "1.6.1";
+    this.version = "1.7.0";
     this.author = "down-bad (Vasilis#1517)";
     this._client = null;
     this.init = false;
@@ -86143,9 +86226,13 @@ var src = class AdvancedRpcBackend {
   }
   async onRendererReady(_win) {
     this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
-    try {
-      this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, null);
-    } catch {}
+
+    // try {
+    //   this._utils
+    //     .getWindow()
+    //     .webContents.send(`plugin.${this.name}.itemChanged`, null);
+    // } catch {}
+
     this.startedTime = Date.now();
     this.pauseTime = Date.now();
 
@@ -86175,7 +86262,7 @@ var src = class AdvancedRpcBackend {
       const filePath = path.join(this._env.dir, "colors.less");
       ipcMain.handle(`plugin.${this.name}.colorsless`, (_event, data) => {
         fs.writeFile(filePath, data, err => {
-          if (err) console.log(err);
+          if (err) console.log(err);else this._utils.getWindow().webContents.send(`plugin.${this.name}.setcss`, true);
         });
       });
     } catch {}
@@ -86189,31 +86276,30 @@ var src = class AdvancedRpcBackend {
 
     // Get current song data from localStorage
     try {
-      ipcMain.handle(`plugin.${this.name}.currentItem`, (_event, item) => {
-        if (item) this.currentItem = JSON.parse(item);else this.currentItem = {};
+      ipcMain.handle(`plugin.${this.name}.currentItem`, (_event, item, update) => {
+        if (item) {
+          this.currentItem = JSON.parse(item);
+          if (update) this.setActivity(this._attributes);
+        } else this.currentItem = {};
       });
     } catch {}
 
     // Handle arpc settings changes
     ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
       if (!settings || !this._initSettings) return;
-      this._settings.applySettings = settings.applySettings;
-      console.log(this._prevSettings);
-      if (settings.applySettings === "manually") {
-        if (JSON.stringify(this._prevSettings) === JSON.stringify(settings)) this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);else {
-          this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, true);
-        }
-      } else {
-        this._prevSettings = settings;
-        this._settings = settings;
-        this.setActivity(this._attributes);
+      if (JSON.stringify(this._prevSettings) === JSON.stringify(settings)) this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);else {
+        this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, true);
       }
     });
     ipcMain.handle(`plugin.${this.name}.updateSettings`, (_event, settings) => {
       if (!settings) return;
+      const update = this._settings.icloudArtworks !== settings.icloudArtworks;
       this._prevSettings = settings;
       this._settings = settings;
       this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      const cover = this._settings.play.largeImage === "cover" || this._settings.pause.largeImage === "cover" || this._settings.play.smallImage === "cover" || this._settings.pause.smallImage === "cover";
+      const enabled = this._settings.enabled && (this._settings.play.enabled || this._settings.pause.enabled);
+      this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, enabled, cover, this._settings.icloudArtworks, this._attributes?.kind === "song", this._attributes?.songId, this._attributes?.artwork?.url, update);
       this.setActivity(this._attributes);
     });
     ipcMain.handle(`plugin.${this.name}.resetChanges`, _event => {
@@ -86256,13 +86342,15 @@ var src = class AdvancedRpcBackend {
     // Song change
     if (attributes.songId !== prevAttributes?.songId) {
       try {
-        this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, null);
+        const cover = this._settings.play.largeImage === "cover" || this._settings.pause.largeImage === "cover" || this._settings.play.smallImage === "cover" || this._settings.pause.smallImage === "cover";
+        const enabled = this._settings.enabled && (this._settings.play.enabled || this._settings.pause.enabled);
+        this._utils.getWindow().webContents.send(`plugin.${this.name}.itemChanged`, enabled, cover, this._settings.icloudArtworks, attributes.kind === "song", attributes.songId, attributes.artwork?.url);
       } catch {}
       this.startedTime = Date.now();
       this.pauseTime = Date.now();
       this.cleared = false;
     }
-    if (attributes.kind === "song" && !attributes.songId.startsWith("i.") && this.currentItem?._songId !== attributes.songId) return;
+    if (attributes.kind === "song" && (!attributes.songId.startsWith("i.") && this.currentItem?._songId !== attributes.songId || attributes.songId.startsWith("i.") && this.currentItem?.id !== attributes.songId)) return;
 
     // Pause
     if (attributes.status !== prevAttributes?.status && !attributes.status) {
@@ -86296,10 +86384,7 @@ var src = class AdvancedRpcBackend {
     }
     this._prevAttributes = attributes;
   }
-  setActivity(attributes) {
-    if (this._settings.applySettings === "immediately") {
-      this._utils.getWindow().webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-    }
+  async setActivity(attributes) {
     if (!this._client || !attributes) return;
     if (this._utils.getStoreValue("connectivity.discord_rpc.enabled") || !this._settings.enabled || this._settings.respectPrivateSession && this._utils.getStoreValue("general.privateEnabled") || attributes.playParams?.id === "no-id-found") {
       this._client.clearActivity();
@@ -86335,8 +86420,10 @@ var src = class AdvancedRpcBackend {
 
     // Set large image
     if (settings.largeImage.startsWith("cover")) {
-      activity.largeImageKey = this.setImage(attributes, settings, fallbackImage, imageSize);
-      if (activity.largeImageKey !== fallbackImage && !this.isValidUrl(activity.largeImageKey)) activity.largeImageKey = fallbackImage;
+      activity.largeImageKey = await this.setImage(attributes, settings, fallbackImage, imageSize);
+      if (activity.largeImageKey !== fallbackImage && !this.isValidUrl(activity.largeImageKey)) {
+        activity.largeImageKey = fallbackImage;
+      }
     } else if (settings.largeImage === "custom") {
       activity.largeImageKey = settings.largeImageKey;
     }
@@ -86344,7 +86431,7 @@ var src = class AdvancedRpcBackend {
     // Set small image
     activity.smallImageText = settings.smallImageText;
     if (settings.smallImage.startsWith("cover")) {
-      activity.smallImageKey = this.setImage(attributes, settings, fallbackImage, imageSize);
+      activity.smallImageKey = await this.setImage(attributes, settings, fallbackImage, imageSize);
       if (activity.smallImageKey !== fallbackImage && !this.isValidUrl(activity.smallImageKey)) activity.smallImageKey = fallbackImage;
     } else if (settings.smallImage === "custom") {
       activity.smallImageKey = settings.smallImageKey;
@@ -86571,12 +86658,21 @@ var src = class AdvancedRpcBackend {
     }
     return url.protocol === "http:" || url.protocol === "https:";
   }
-  setImage(attributes, settings, fallbackImage, imageSize) {
-    if (attributes.kind === "song" && settings.largeImage === "cover" && this.remoteData?.animatedArtworks && this.artworks && this.currentItem?._songId === attributes.songId && this.artworks[this.currentItem?._assets?.[0]?.metadata?.playlistId]) {
-      return this.artworks[this.currentItem._assets[0].metadata.playlistId];
+  async setImage(attributes, settings, fallbackImage, imageSize) {
+    let imageUrl;
+    if (settings.largeImage === "cover" && this.currentItem?.artwork && (this.currentItem?._songId === attributes.songId || this.currentItem?.id === attributes.songId)) {
+      imageUrl = this.currentItem.artwork.replace("{w}", imageSize ?? 1024).replace("{h}", imageSize ?? 1024);
+    } else if (attributes.artwork.url && attributes.artwork.url.length <= 256) {
+      imageUrl = attributes.artwork.url.replace("{w}", imageSize ?? 1024).replace("{h}", imageSize ?? 1024);
     } else {
-      return attributes.artwork?.url?.replace("{w}", imageSize ?? 1024).replace("{h}", imageSize ?? 1024) ?? fallbackImage;
+      imageUrl = fallbackImage;
     }
+
+    // Animated artworks v1
+    if (this.remoteData?.flags?.animatedArtworks && !this.remoteData?.animatedArtworksv2?.enabled && this.artworks && this.currentItem?._songId === attributes.songId && this.artworks[this.currentItem?._assets?.[0]?.metadata?.playlistId]) {
+      imageUrl = this.artworks[this.currentItem._assets[0].metadata.playlistId];
+    }
+    return imageUrl;
   }
   setButtons(button1, button2, activity) {
     if (button1.label && button1.url) {

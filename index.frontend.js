@@ -1,4 +1,4 @@
-/* Version: 1.6.1 - March 27, 2023 02:24:23 */
+/* Version: 1.7.0 - August 9, 2023 02:26:52 */
 (function () {
   'use strict';
 
@@ -24,6 +24,13 @@
       @close-modal="setModal('')"
     />
 
+    <arpc-custom-modal
+      v-if="modal?.startsWith('custom-')"
+      :modal="modal"
+      :modalData="remoteData?.modals?.find((m) => m.id === modal)"
+      @do-action="doAction"
+    />
+
     <arpc-artwork-request
       v-if="modal === 'artwork-request'"
       @close-modal="setModal('')"
@@ -37,17 +44,12 @@
   <div class="arpc-page">
     <Transition name="arpc-slide">
       <div class="arpc-unapplied-settings-alert" v-show="unappliedSettings">
-        <div class="arpc-unapplied-settings-content">
-          <div v-if="settings.applySettings === 'state'">
-            Your changes will apply on playback state change. Apply now?
-          </div>
-          <div
-            @click="clickingEe('unappliedTextEe')"
-            v-else-if="settings.applySettings === 'manually'"
-          >
-            You've made changes, apply them to update your Discord presence.
-          </div>
-          <div v-else>;)</div>
+        <div
+          @click="clickingEe('unappliedTextEe')"
+          class="arpc-unapplied-settings-content"
+          :style="settingsStyle"
+        >
+          <div>Apply your changes to update your Discord presence.</div>
           <div class="arpc-unapplied-settings-options">
             <button
               class="arpc-button arpc-button-underline"
@@ -66,7 +68,7 @@
       </div></Transition
     >
 
-    <div class="arpc-settings">
+    <div class="arpc-settings" :style="settingsStyle">
       <arpc-sidebar
         :installedVersion="installedVersion"
         :versionData="versionData"
@@ -75,10 +77,11 @@
         :frontend="frontend"
         @do-action="doAction"
         @click-ee="clickingEe"
+        :style="sidebarScaleStyle"
       ></arpc-sidebar>
 
       <div class="arpc-content">
-        <Transition name="arpc-settings-slide">
+        <!-- <Transition name="arpc-settings-slide">
           <div
             class="arpc-bubbles-bar arpc-expandable"
             @click="toggleBubbles()"
@@ -94,75 +97,80 @@
             <arpc-expand-button
               :expanded="frontend.bubblesExpanded"
             ></arpc-expand-button></div
+        ></Transition> -->
+
+        <Transition name="arpc-settings-slide">
+          <arpc-bubble
+            v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
+            v-bind="privateSessionBubble"
+          ></arpc-bubble>
+        </Transition>
+
+        <Transition name="arpc-settings-slide">
+          <arpc-bubble
+            v-if="app.cfg.connectivity.discord_rpc.enabled"
+            v-bind="ciderRpcBubble"
+          ></arpc-bubble
         ></Transition>
 
         <Transition name="arpc-settings-slide">
-          <div v-show="frontend.bubblesExpanded">
-            <Transition name="arpc-settings-slide">
-              <arpc-bubble
-                v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
-                v-bind="privateSessionBubble"
-              ></arpc-bubble
-            ></Transition>
-
-            <Transition name="arpc-settings-slide">
-              <arpc-bubble
-                v-if="app.cfg.connectivity.discord_rpc.enabled"
-                v-bind="ciderRpcBubble"
-              ></arpc-bubble
-            ></Transition>
-
-            <arpc-bubble
-              v-for="bubble in bubbles"
-              v-if="bubble?.enabled"
-              v-bind="bubble"
-              @do-action="doAction"
-            ></arpc-bubble></div
+          <arpc-bubble
+            v-if="!remoteData"
+            v-bind="noConnectionBubble"
+          ></arpc-bubble
         ></Transition>
+
+        <arpc-bubble
+          v-for="bubble in remoteData?.bubbles"
+          v-if="bubble?.enabled"
+          v-bind="bubble"
+          @do-action="doAction"
+        ></arpc-bubble>
 
         <!-- General -->
         <arpc-general
           v-show="frontend.sidebar === 'general'"
-          :data="[settings.play, settings.pause, settings.enabled]"
+          :data="[settings.play, settings.pause, settings.enabled, frontend.pageStates.general, remoteData?.flags]"
           @update="receiveSettings"
           @click-ee="clickingEe"
-          @set-modal="setModal"
-          @sidebar-item="changeSidebarItem"
+          @do-action="doAction"
         />
 
         <!-- Podcasts -->
         <arpc-podcasts
           v-show="frontend.sidebar === 'podcasts'"
-          :data="[settings.podcasts, settings.enabled]"
+          :data="[settings.podcasts, settings.enabled, frontend.pageStates.podcasts, remoteData?.flags]"
           @update="receiveSettings"
           @click-ee="clickingEe"
-          @set-modal="setModal"
-          @sidebar-item="changeSidebarItem"
+          @do-action="doAction"
         />
 
         <!-- Videos -->
         <arpc-videos
           v-show="frontend.sidebar === 'videos'"
-          :data="[settings.videos, settings.enabled]"
+          :data="[settings.videos, settings.enabled, frontend.pageStates.videos, remoteData?.flags]"
           @update="receiveSettings"
           @click-ee="clickingEe"
-          @set-modal="setModal"
-          @sidebar-item="changeSidebarItem"
+          @do-action="doAction"
         />
 
         <!-- Radio -->
         <arpc-radio
           v-show="frontend.sidebar === 'radio'"
-          :data="[settings.radio, settings.enabled]"
+          :data="[settings.radio, settings.enabled, remoteData?.flags]"
           @update="receiveSettings"
           @click-ee="clickingEe"
-          @set-modal="setModal"
-          @sidebar-item="changeSidebarItem"
+          @do-action="doAction"
         />
 
         <!-- Settings -->
         <div v-show="frontend.sidebar === 'settings'">
-          <h2 @click="clickingEe('settingsClickEe')">Settings</h2>
+          <div class="arpc-settings-header">
+            <h2 @click="clickingEe('settingsClickEe')">Settings</h2>
+            <arpc-exit-button
+              v-if="remoteData?.flags?.exitButton"
+            ></arpc-exit-button>
+          </div>
 
           <div class="arpc-option-container">
             <div :disabled="app.cfg.connectivity.discord_rpc.enabled">
@@ -211,6 +219,56 @@
                   <input
                     type="checkbox"
                     v-model="settings.respectPrivateSession"
+                    switch
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div
+              v-if="remoteData?.icloudArtworks?.setting"
+              :disabled="remoteData?.icloudArtworks?.settingDisabled"
+              class="arpc-option"
+            >
+              <div class="arpc-option-segment">
+                <div class="arpc-option-with-badge">
+                  <div v-if="remoteData?.icloudArtworks?.settingTitle">
+                    {{ remoteData?.icloudArtworks?.settingTitle }}
+                  </div>
+                  <div v-else>iCloud Music Artworks</div>
+                  <div
+                    v-if="remoteData?.badges?.icloud?.text"
+                    :style="{background: remoteData?.badges?.icloud?.color, color: remoteData?.badges?.icloud?.textColor}"
+                    class="arpc-badge"
+                  >
+                    {{ remoteData?.badges?.icloud?.text }}
+                  </div>
+                </div>
+                <small v-if="remoteData?.icloudArtworks?.settingDesc">
+                  {{ remoteData?.icloudArtworks?.settingDesc }}
+                </small>
+                <small v-else
+                  >Show the artworks of the songs uploaded to your iCloud Music
+                  Library.</small
+                >
+              </div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <label>
+                  <input
+                    v-if="remoteData?.icloudArtworks?.settingDisabled && remoteData?.icloudArtworks?.forceOn"
+                    type="checkbox"
+                    checked
+                    switch
+                  />
+                  <input
+                    v-else-if="remoteData?.icloudArtworks?.settingDisabled"
+                    type="checkbox"
+                    switch
+                  />
+                  <input
+                    v-else
+                    type="checkbox"
+                    v-model="settings.icloudArtworks"
                     switch
                   />
                 </label>
@@ -302,27 +360,6 @@
               </div>
             </div>
 
-            <div class="arpc-option">
-              <div class="arpc-option-segment">
-                Apply Settings Immediately
-                <small
-                  >Apply settings to your Discord presence as you change them.
-                  This can cause rate limits.</small
-                >
-              </div>
-              <div class="arpc-option-segment arpc-option-segment_auto">
-                <label>
-                  <input
-                    type="checkbox"
-                    v-model="settings.applySettings"
-                    true-value="immediately"
-                    false-value="manually"
-                    switch
-                  />
-                </label>
-              </div>
-            </div>
-
             <div v-if="themes && themes.length > 0" class="arpc-option">
               <div
                 class="arpc-option-segment"
@@ -332,11 +369,11 @@
                 <div class="arpc-option-with-badge">
                   Theme
                   <div
-                    v-if="remoteData?.themesBadge?.text"
-                    :style="{background: remoteData?.themesBadge?.color, color: remoteData?.themesBadge?.textColor}"
+                    v-if="remoteData?.badges?.themes?.text"
+                    :style="{background: remoteData?.badges?.themes?.color, color: remoteData?.badges?.themes?.textColor}"
                     class="arpc-badge"
                   >
-                    {{ remoteData?.themesBadge?.text }}
+                    {{ remoteData?.badges?.themes?.text }}
                   </div>
                 </div>
                 <small
@@ -349,7 +386,7 @@
               <div class="arpc-option-segment arpc-option-segment_auto">
                 <label>
                   <select
-                    v-if="remoteData?.categorizedThemes"
+                    v-if="remoteData?.flags?.categorizedThemes"
                     class="arpc-select"
                     v-model="frontend.theme"
                   >
@@ -370,6 +407,28 @@
                     <option v-for="theme in themes" :value="theme.id">
                       {{ theme.name }}
                     </option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div v-if="remoteData?.flags?.scaleSetting" class="arpc-option">
+              <div class="arpc-option-segment">Scale</div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <label>
+                  <select class="arpc-select" v-model="frontend.scale">
+                    <option value="" disabled hidden>Scale</option>
+                    <option value="75">75%</option>
+                    <option value="80">80%</option>
+                    <option value="85">85%</option>
+                    <option value="90">90%</option>
+                    <option value="95">95%</option>
+                    <option value="100">100%</option>
+                    <option value="105">105%</option>
+                    <option value="110">110%</option>
+                    <option value="115">115%</option>
+                    <option value="120">120%</option>
+                    <option value="125">125%</option>
                   </select>
                 </label>
               </div>
@@ -566,13 +625,13 @@
           }
         },
         imageSize: "1024",
-        applySettings: "manually",
         removeInvalidButtons: true,
-        removePause: "0"
+        removePause: "0",
+        icloudArtworks: true
       },
       installedVersion: AdvancedRpc.installedVersion,
       unappliedSettings: AdvancedRpc.unappliedSettings,
-      versionInfo: "ARPC 1.6.1 - March 27, 2023 02:24:23",
+      versionInfo: "ARPC 1.7.0 - August 9, 2023",
       textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
       urlVariables: "{appleMusicUrl}, {ciderUrl}",
       variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
@@ -589,25 +648,72 @@
         color: "#FAA81A",
         icon: "warning"
       },
+      noConnectionBubble: {
+        enabled: true,
+        title: "Huston, we have a problem.",
+        message: "Unable to establish a connection to the AdvancedRPC server. Some features may be unavailable. Please check your internet connection, or try again later.",
+        color: "#F04747",
+        icon: ""
+      },
       frontend: {
         sidebar: "general",
         theme: "dark",
-        bubblesExpanded: true
+        bubblesExpanded: true,
+        scale: "100",
+        pageStates: {
+          general: "play",
+          videos: "play",
+          podcasts: "play"
+        }
       },
       themes: [],
       filteredCategorizedThemes: {},
-      bubbles: []
+      settingsStyle: {
+        zoom: "100%"
+      }
     }),
     computed: {
       remoteData() {
         const data = Vue.observable(window.AdvancedRpc).remoteData;
-        this.initBubbles(data?.bubbles);
         if (data?.themes) this.themes = Object.values(data.themes).flat();
         this.setTheme(this.frontend.theme, data);
         return data;
       },
       versionData() {
         return Vue.observable(window.AdvancedRpc).versionData;
+      },
+      sidebarScaleStyle() {
+        const scaleToHeightMap = app?.cfg?.visual?.directives?.windowLayout === "twopanel" ? {
+          75: "97.5",
+          80: "98",
+          85: "98.5",
+          90: "99",
+          95: "99.5",
+          105: "100.5",
+          110: "101.5",
+          115: "102",
+          120: "102.5",
+          125: "103"
+        } : null;
+        const scaleToPaddingMap = {
+          75: "27.5",
+          80: "25",
+          85: "22.5",
+          90: "20",
+          95: "17.5",
+          105: "12.5",
+          110: "10",
+          115: "7.5",
+          120: "5",
+          125: "2.5"
+        };
+        const scale = this.frontend.scale;
+        const heightValue = scaleToHeightMap?.[scale] || "100";
+        const paddingValue = scaleToPaddingMap[scale] || "15";
+        return `
+      height: calc(${heightValue}% - var(--chromeHeight2));
+      padding-top: calc(var(--chromeHeight1) + ${paddingValue}px);
+      `;
       }
     },
     watch: {
@@ -617,7 +723,6 @@
           if (this.settings["imageSize"] < 0) this.settings["imageSize"] = 1;
           AdvancedRpc.setSettings(this.settings);
           ipcRenderer.invoke(`plugin.${AdvancedRpc.PLUGIN_NAME}.setting`, this.settings);
-          this.initBubbles(this.remoteData?.bubbles);
         },
         deep: true
       },
@@ -625,6 +730,7 @@
         handler() {
           AdvancedRpc.setFrontendData(this.frontend);
           this.setTheme(this.frontend.theme, this.remoteData);
+          this.settingsStyle.zoom = `${this.frontend.scale}%`;
         },
         deep: true
       }
@@ -632,10 +738,12 @@
     async created() {
       this.settings = AdvancedRpc.getSettings();
       let frontend = AdvancedRpc.getFrontendData();
-      if (typeof frontend["bubblesExpanded"] === "undefined") frontend["bubblesExpanded"] = true;
+      if (!frontend["scale"]) frontend["scale"] = "100";
+      if (!frontend.pageStates["general"]) frontend.pageStates["general"] = "play";
+      if (!frontend.pageStates["videos"]) frontend.pageStates["videos"] = "play";
+      if (!frontend.pageStates["podcasts"]) frontend.pageStates["podcasts"] = "play";
       this.frontend = frontend;
       this.setTheme(frontend.theme, this.remoteData);
-      this.initBubbles(this.remoteData?.bubbles);
     },
     async mounted() {
       ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.unappliedSettings`, (e, status) => {
@@ -646,7 +754,7 @@
         this.settings = settings;
       });
       document.onkeydown = this.checkKey;
-      if (!this.remoteData?.dontTriggerApiOnMount) await AdvancedRpc.checkForUpdates("arpc");
+      if (!this.remoteData?.flags?.dontTriggerApiOnMount) await AdvancedRpc.checkForUpdates("arpc");
     },
     methods: {
       receiveSettings(key, settings) {
@@ -683,23 +791,64 @@
         this.frontend.bubblesExpanded = !this.frontend.bubblesExpanded;
       },
       changeSidebarItem(item) {
-        this.frontend.sidebar = item;
-        document.querySelector(".arpc-page").scrollIntoView();
+        item = item.split(".");
+        this.frontend.sidebar = item[0];
+        if (item[1]) this.frontend.pageStates[item[0]] = item[1];else document.querySelector(".arpc-page").scrollIntoView();
       },
-      async doAction(item) {
-        if (item.dest) item = item.dest;
-        if (item.startsWith("arpc.")) {
-          this.changeSidebarItem(item.replace("arpc.", ""));
-        } else if (item.startsWith("modal.")) {
-          this.setModal(item.replace("modal.", ""));
-        } else if (item.startsWith("theme.")) {
-          const prevTheme = this.frontend.theme;
-          this.setTheme(item.replace("theme.", ""), this.remoteData);
-          if (prevTheme !== item.replace("theme.", "")) this.reportThemeUnlock(item.replace("theme.", ""));
-        } else if (item.startsWith("unlockTheme.")) {
-          this.unlockTheme(item.replace("unlockTheme.", ""));
-        } else {
-          this.openLink(item);
+      doAction(data) {
+        if (data.dest) data = data.dest;
+        let dest;
+        if (typeof data === "string") {
+          dest = !data.startsWith("http") ? data.split(".")[0] : data;
+        }
+        if (!dest) return;
+        let action;
+        if (!data.startsWith("http")) action = data.split(".").slice(1).join(".");
+        switch (dest) {
+          case "arpc":
+            this.changeSidebarItem(action);
+            break;
+          case "modal":
+            if (action === "close") this.modal = null;else this.setModal(action);
+            break;
+          case "theme":
+            const prevTheme = this.frontend.theme;
+            this.setTheme(action, this.remoteData);
+            if (prevTheme !== action) this.reportThemeUnlock(action);
+            break;
+          case "unlockTheme":
+            this.unlockTheme(action);
+            break;
+          case "play":
+            app.mk.setQueue({
+              url: action,
+              parameters: {
+                l: app.mklang
+              }
+            }).then(() => {
+              app.mk.play();
+            });
+            break;
+          case "ciderModal":
+            app.modals[action] = true;
+            break;
+          case "ciderHash":
+            window.location.hash = action;
+            break;
+          case "closeCider":
+            app.closeWindow();
+            break;
+          case "restartCider":
+            ipcRenderer.invoke("relaunchApp");
+            break;
+          case "back":
+            app.navigateBack();
+            break;
+          case "update":
+            AdvancedRpc.update();
+            break;
+          default:
+            this.openLink(dest);
         }
       },
       openLink(url) {
@@ -767,7 +916,7 @@
       },
       async reportThemeUnlock(theme) {
         try {
-          await fetch(`https://dev-api.imvasi.com/theme?version=${this.installedVersion}&theme=${theme}
+          await fetch(`https://arpc-api.imvasi.com/theme?version=${this.installedVersion}&theme=${theme}
         `, {
             method: "POST",
             headers: {
@@ -776,20 +925,13 @@
           });
         } catch {}
       },
-      initBubbles(data) {
-        let bubbles = [];
-        data?.forEach(bubble => {
-          if (bubble.enabled) bubbles.push(bubble);
-        });
-        if (app.cfg.general.privateEnabled && this.settings.respectPrivateSession) bubbles.push(undefined);
-        if (app.cfg.connectivity.discord_rpc.enabled) bubbles.push(undefined);
-        this.bubbles = bubbles;
-      },
       checkKey(e) {
         e = e || window.event;
 
         // esc
-        if (e.keyCode == "27") {
+        if (e.keyCode == "27" && this.remoteData?.flags?.escExit) {
+          this.modal ? this.modal = null : app.navigateBack();
+        } else if (e.keyCode == "27") {
           this.modal = null;
         }
 
@@ -803,10 +945,11 @@
   });
 
   Vue.component("arpc-bubble", {
-    props: ["enabled", "message", "url", "icon", "color", "backgroundColor", "textColor", "iconColor"],
+    props: ["id", "enabled", "title", "message", "url", "icon", "color", "backgroundColor", "textColor", "iconColor"],
     template: `
   <div
   class="arpc-bubble"
+  :id="id &&  'arpc-bubble-' + id"
   :style="{'border-color': color, 'background': backgroundColor || color + '1a', 'cursor': url ? 'pointer' : 'default'}"
   @click="url && $emit('do-action', url)"
 >
@@ -854,7 +997,8 @@
     </svg>
   </div>
   <div class="arpc-bubble-text" :style="{'color': textColor || ''}">
-    {{message}}
+    <div v-if="title" class="arpc-bubble-title">{{title}}</div>
+    <div>{{message}}</div>
   </div>
 </div>
 
@@ -873,11 +1017,13 @@
       <div>What's New</div>
       <arpc-close-button @close="$emit('close-changelog')"></arpc-close-button>
     </div>
-    <div
-      class="arpc-modal-content"
-      id="arpc-changelog"
-      v-html="changelog"
-    ></div>
+    <div class="arpc-modal-content" id="arpc-changelog">
+      <div v-if="changelog" v-html="changelog"></div>
+      <div v-else>
+        <arpc-spinner></arpc-spinner>
+      </div>
+    </div>
+
     <div class="arpc-modal-footer">
       <div v-if="gettingRemoteData">Checking for updates...</div>
       <div v-else-if="versionData && versionData.updateAvailable">
@@ -898,9 +1044,7 @@
         </div>
         <div v-else>No update available.</div>
 
-        <div
-          v-if="remoteData?.animatedArtworks && !remoteData?.hideLastArtworkUpdate"
-        >
+        <div v-if="!remoteData?.flags?.hideLastArtworkUpdate">
           <div v-if="gettingAnimatedArtworks">
             Checking animated artworks...
           </div>
@@ -963,6 +1107,9 @@
     },
     methods: {
       update() {
+        if (this.updating || !this.versionData || !this.versionData.updateAvailable || this.gettingRemoteData) {
+          return;
+        }
         AdvancedRpc.update();
       }
     }
@@ -1111,6 +1258,7 @@
     <div
       v-for="item in sideBarItems?.upper"
       :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && versionData?.updateAvailable}"
+      :id="item.id && 'arpc-sidebar-item-' + item.id"
       @click="$emit('do-action', item)"
     >
       {{ item.dest === 'modal.changelog' && versionData?.updateAvailable ?
@@ -1128,6 +1276,7 @@
     <div
       v-for="item in sideBarItems?.lower"
       :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && versionData?.updateAvailable}"
+      :id="item.id && 'arpc-sidebar-item-' + item.id"
       @click="$emit('do-action', item)"
     >
       {{ item.dest === 'modal.changelog' && versionData?.updateAvailable ?
@@ -1141,7 +1290,21 @@
       </div>
     </div>
 
-    <footer @click="openLink('https://github.com/down-bad/advanced-rpc')">
+    <div v-if="computedRemoteData?.footers" class="arpc-footer">
+      <div
+        v-for="footer in computedRemoteData?.footers"
+        class="arpc-footer-item"
+        :id="'arpc-footer-item-' + footer.id"
+        :style="{pointerEvents: footer.dest ? 'auto' : 'none'}"
+        @click="$emit('do-action', footer.dest)"
+      >
+        {{ footerText(footer.text) }}
+      </div>
+    </div>
+    <footer
+      v-else
+      @click="openLink('https://github.com/down-bad/advanced-rpc')"
+    >
       {{ versionInfo }}
     </footer>
   </div>
@@ -1150,7 +1313,9 @@
 `,
     props: ["installedVersion", "versionData", "versionInfo", "remoteData", "frontend"],
     data: () => ({
-      sideBarItems: null
+      sideBarItems: null,
+      version: null,
+      versionDate: null
     }),
     computed: {
       computedRemoteData() {
@@ -1161,14 +1326,19 @@
     },
     created() {
       this.sidebarItems(this.computedRemoteData);
+      this.version = AdvancedRpc.installedVersion;
+      this.versionDate = AdvancedRpc.versionDate;
     },
     methods: {
+      footerText(text) {
+        return text.replaceAll("$version", this.version).replaceAll("$date", this.versionDate);
+      },
       sidebarItems(remoteData) {
         this.sideBarItems = remoteData?.sideBarItems;
         if (!this.sideBarItems) {
           this.sideBarItems = {
             upper: [{
-              text: "General",
+              text: "Songs",
               dest: "arpc.general",
               id: "general"
             }, {
@@ -1189,6 +1359,9 @@
               id: "settings"
             }],
             lower: [{
+              text: "Variables",
+              dest: "modal.variables"
+            }, {
               text: "Changelog",
               updateText: "Update available!",
               dest: "modal.changelog"
@@ -1246,12 +1419,32 @@
     props: ["data"],
     template: `
   <div>
-  <h2 @click="$emit('click-ee', 'generalClickEe')">General</h2>
-  <h3>Play</h3>
+  <div class="arpc-settings-header">
+    <h2 @click="$emit('click-ee', 'generalClickEe')">Songs</h2>
+    <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
+  </div>
+
+  <div class="arpc-state-selector" v-if="flags?.stateSelector">
+    <h3
+      :class="{'arpc-selected-state': state === 'play'}"
+      @click="$emit('do-action', 'arpc.general.play')"
+    >
+      Play
+    </h3>
+    <h3
+      :class="{'arpc-selected-state': state === 'pause'}"
+      @click="$emit('do-action', 'arpc.general.pause')"
+    >
+      Pause
+    </h3>
+  </div>
+
+  <h3 v-if="!flags?.stateSelector">Play</h3>
 
   <div
     class="arpc-option-container"
     :disabled="app.cfg.connectivity.discord_rpc.enabled || !enabled"
+    v-show="!flags?.stateSelector || state === 'play'"
   >
     <div class="arpc-option">
       <div class="arpc-option-segment">Show Presence on Playback</div>
@@ -1263,13 +1456,14 @@
     </div>
 
     <div :disabled="!settings.play.enabled">
+      <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          First Line (details)
+          First Line
           <small
             >Max 128 characters<br /><button
               class="arpc-button arpc-var-button"
-              @click="$emit('set-modal', 'variables')"
+              @click="$emit('do-action', 'modal.variables')"
             >
               {variables}
             </button>
@@ -1284,11 +1478,11 @@
 
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          Second Line (state)
+          Second Line
           <small
             >Max 128 characters<br /><button
               class="arpc-button arpc-var-button"
-              @click="$emit('set-modal', 'variables')"
+              @click="$emit('do-action', 'modal.variables')"
             >
               {variables}
             </button></small
@@ -1314,8 +1508,12 @@
         </div>
       </div>
 
+      <div v-if="flags?.categorizedOptions" class="arpc-label">LARGE IMAGE</div>
       <div class="arpc-option">
-        <div class="arpc-option-segment">Large Image</div>
+        <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+          Image
+        </div>
+        <div v-else class="arpc-option-segment">Large Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <select class="arpc-select" v-model="settings.play.largeImage">
@@ -1330,7 +1528,8 @@
 
       <div class="arpc-option" v-show="settings.play.largeImage == 'custom'">
         <div class="arpc-option-segment">
-          Large Image Key / URL
+          <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+          <div v-else>Large Image Key / URL</div>
           <small>Max 256 characters<br /></small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1342,11 +1541,12 @@
 
       <div class="arpc-option" v-show="settings.play.largeImage != 'disabled'">
         <div class="arpc-option-segment">
-          Large Image Text
+          <div v-if="flags?.categorizedOptions">Text</div>
+          <div v-else>Large Image Text</div>
           <small
             >Max 128 characters<br /><button
               class="arpc-button arpc-var-button"
-              @click="$emit('set-modal', 'variables')"
+              @click="$emit('do-action', 'modal.variables')"
             >
               {variables}
             </button></small
@@ -1359,8 +1559,12 @@
         </div>
       </div>
 
+      <div v-if="flags?.categorizedOptions" class="arpc-label">SMALL IMAGE</div>
       <div class="arpc-option">
-        <div class="arpc-option-segment">Small Image</div>
+        <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+          Image
+        </div>
+        <div v-else class="arpc-option-segment">Small Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <select class="arpc-select" v-model="settings.play.smallImage">
@@ -1375,7 +1579,8 @@
 
       <div class="arpc-option" v-show="settings.play.smallImage == 'custom'">
         <div class="arpc-option-segment">
-          Small Image Key / URL
+          <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+          <div v-else>Small Image Key / URL</div>
           <small>Max 256 characters<br /></small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1387,11 +1592,12 @@
 
       <div class="arpc-option" v-show="settings.play.smallImage != 'disabled'">
         <div class="arpc-option-segment">
-          Small Image Text
+          <div v-if="flags?.categorizedOptions">Text</div>
+          <div v-else>Small Image Text</div>
           <small
             >Max 128 characters<br /><button
               class="arpc-button arpc-var-button"
-              @click="$emit('set-modal', 'variables')"
+              @click="$emit('do-action', 'modal.variables')"
             >
               {variables}
             </button></small
@@ -1404,6 +1610,7 @@
         </div>
       </div>
 
+      <div v-if="flags?.categorizedOptions" class="arpc-label">BUTTONS</div>
       <div class="arpc-option">
         <div class="arpc-option-segment">Enable Buttons</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1421,7 +1628,7 @@
               ><b>Max label length</b>: 30 characters<br />
               <b>Max URL length</b>: 512 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -1449,12 +1656,12 @@
     </div>
   </div>
 
-  <!-- Pause -->
-  <h3>Pause</h3>
+  <h3 v-if="!flags?.stateSelector">Pause</h3>
 
   <div
     class="arpc-option-container"
     :disabled="app.cfg.connectivity.discord_rpc.enabled || !enabled"
+    v-show="!flags?.stateSelector || state == 'pause'"
   >
     <div class="arpc-option">
       <div class="arpc-option-segment">Show Presence while Paused</div>
@@ -1466,13 +1673,14 @@
     </div>
 
     <div :disabled="!settings.pause.enabled">
+      <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          First Line (details)
+          First Line
           <small
             >Max 128 characters<br /><button
               class="arpc-button arpc-var-button"
-              @click="$emit('set-modal', 'variables')"
+              @click="$emit('do-action', 'modal.variables')"
             >
               {variables}
             </button></small
@@ -1487,11 +1695,11 @@
 
       <div class="arpc-option">
         <div class="arpc-option-segment">
-          Second Line (state)
+          Second Line
           <small
             >Max 128 characters<br /><button
               class="arpc-button arpc-var-button"
-              @click="$emit('set-modal', 'variables')"
+              @click="$emit('do-action', 'modal.variables')"
             >
               {variables}
             </button></small
@@ -1504,8 +1712,12 @@
         </div>
       </div>
 
+      <div v-if="flags?.categorizedOptions" class="arpc-label">LARGE IMAGE</div>
       <div class="arpc-option">
-        <div class="arpc-option-segment">Large Image</div>
+        <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+          Image
+        </div>
+        <div v-else class="arpc-option-segment">Large Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <select class="arpc-select" v-model="settings.pause.largeImage">
@@ -1520,7 +1732,8 @@
 
       <div class="arpc-option" v-show="settings.pause.largeImage == 'custom'">
         <div class="arpc-option-segment">
-          Large Image Key / URL
+          <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+          <div v-else>Large Image Key / URL</div>
           <small>Max 256 characters<br /></small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1532,11 +1745,12 @@
 
       <div class="arpc-option" v-show="settings.pause.largeImage != 'disabled'">
         <div class="arpc-option-segment">
-          Large Image Text
+          <div v-if="flags?.categorizedOptions">Text</div>
+          <div v-else>Large Image Text</div>
           <small
             >Max 128 characters<br /><button
               class="arpc-button arpc-var-button"
-              @click="$emit('set-modal', 'variables')"
+              @click="$emit('do-action', 'modal.variables')"
             >
               {variables}
             </button></small
@@ -1549,8 +1763,12 @@
         </div>
       </div>
 
+      <div v-if="flags?.categorizedOptions" class="arpc-label">SMALL IMAGE</div>
       <div class="arpc-option">
-        <div class="arpc-option-segment">Small Image</div>
+        <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+          Image
+        </div>
+        <div v-else class="arpc-option-segment">Small Image</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <select class="arpc-select" v-model="settings.pause.smallImage">
@@ -1565,7 +1783,8 @@
 
       <div class="arpc-option" v-show="settings.pause.smallImage == 'custom'">
         <div class="arpc-option-segment">
-          Small Image Key / URL
+          <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+          <div v-else>Small Image Key / URL</div>
           <small>Max 256 characters<br /></small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1577,11 +1796,12 @@
 
       <div class="arpc-option" v-show="settings.pause.smallImage != 'disabled'">
         <div class="arpc-option-segment">
-          Small Image Text
+          <div v-if="flags?.categorizedOptions">Text</div>
+          <div v-else>Small Image Text</div>
           <small
             >Max 128 characters<br /><button
               class="arpc-button arpc-var-button"
-              @click="$emit('set-modal', 'variables')"
+              @click="$emit('do-action', 'modal.variables')"
             >
               {variables}
             </button></small
@@ -1594,6 +1814,7 @@
         </div>
       </div>
 
+      <div v-if="flags?.categorizedOptions" class="arpc-label">BUTTONS</div>
       <div class="arpc-option">
         <div class="arpc-option-segment">Enable Buttons</div>
         <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1631,7 +1852,7 @@
                 ><b>Max label length:</b> 30 characters<br />
                 <b>Max URL length:</b> 512 characters<br /><button
                   class="arpc-button arpc-var-button"
-                  @click="$emit('set-modal', 'variables')"
+                  @click="$emit('do-action', 'modal.variables')"
                 >
                   {variables}
                 </button></small
@@ -1668,7 +1889,9 @@
         play: null,
         pause: null
       },
-      enabled: false
+      enabled: false,
+      state: "play",
+      flags: null
     }),
     watch: {
       play() {
@@ -1678,11 +1901,11 @@
         this.$emit("update", "pause", this.settings.pause);
       },
       data() {
-        [this.settings.play, this.settings.pause, this.enabled] = this.data;
+        [this.settings.play, this.settings.pause, this.enabled, this.state, this.flags] = this.data;
       }
     },
     created() {
-      [this.settings.play, this.settings.pause, this.enabled] = this.data;
+      [this.settings.play, this.settings.pause, this.enabled, this.state, this.flags] = this.data;
     }
   });
 
@@ -1690,12 +1913,32 @@
     props: ["data"],
     template: `
   <div>
-  <h2 @click="$emit('click-ee', 'podcastsClickEe')">Podcasts</h2>
-  <h3>Play</h3>
+  <div class="arpc-settings-header">
+    <h2 @click="$emit('click-ee', 'podcastsClickEe')">Podcasts</h2>
+    <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
+  </div>
+
+  <div class="arpc-state-selector" v-if="flags?.stateSelector">
+    <h3
+      :class="{'arpc-selected-state': state === 'play'}"
+      @click="$emit('do-action', 'arpc.podcasts.play')"
+    >
+      Play
+    </h3>
+    <h3
+      :class="{'arpc-selected-state': state === 'pause'}"
+      @click="$emit('do-action', 'arpc.podcasts.pause')"
+    >
+      Pause
+    </h3>
+  </div>
+
+  <h3 v-if="!flags?.stateSelector">Play</h3>
 
   <div
     class="arpc-option-container"
     :disabled="app.cfg.connectivity.discord_rpc.enabled || !enabled"
+    v-show="!flags?.stateSelector || state === 'play'"
   >
     <div class="arpc-option">
       <div class="arpc-option-segment">Show Presence on Podcast Playback</div>
@@ -1711,9 +1954,9 @@
         <div
           class="arpc-option-segment"
           style="cursor: pointer"
-          @click="$emit('sidebar-item', 'general')"
+          @click="$emit('do-action', 'arpc.general.play')"
         >
-          Use the General Playback Configuration
+          Use the Songs Playback Configuration
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -1729,13 +1972,14 @@
       <div
         :disabled="podcasts.play.usePlayConfig && !(!podcasts.play.enabled || app.cfg.connectivity.discord_rpc.enabled || !enabled)"
       >
+        <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            First Line (details)
+            First Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -1750,11 +1994,11 @@
 
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            Second Line (state)
+            Second Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -1780,8 +2024,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          LARGE IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Large Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Large Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="podcasts.play.largeImage">
@@ -1795,7 +2045,8 @@
 
         <div class="arpc-option" v-show="podcasts.play.largeImage == 'custom'">
           <div class="arpc-option-segment">
-            Large Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Large Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1810,11 +2061,12 @@
           v-show="podcasts.play.largeImage != 'disabled'"
         >
           <div class="arpc-option-segment">
-            Large Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Large Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -1827,8 +2079,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          SMALL IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Small Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Small Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="podcasts.play.smallImage">
@@ -1842,7 +2100,8 @@
 
         <div class="arpc-option" v-show="podcasts.play.smallImage == 'custom'">
           <div class="arpc-option-segment">
-            Small Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Small Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1857,11 +2116,12 @@
           v-show="podcasts.play.smallImage != 'disabled'"
         >
           <div class="arpc-option-segment">
-            Small Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Small Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -1874,6 +2134,7 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">BUTTONS</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">Enable Buttons</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -1892,7 +2153,7 @@
                   ><b>Max label length:</b> 30 characters<br />
                   <b>Max URL length:</b> 512 characters<br /><button
                     class="arpc-button arpc-var-button"
-                    @click="$emit('set-modal', 'variables')"
+                    @click="$emit('do-action', 'modal.variables')"
                   >
                     {variables}
                   </button></small
@@ -1923,11 +2184,12 @@
     </div>
   </div>
 
-  <h3>Pause</h3>
+  <h3 v-if="!flags?.stateSelector">Pause</h3>
 
   <div
     class="arpc-option-container"
     :disabled="app.cfg.connectivity.discord_rpc.enabled || !enabled"
+    v-show="!flags?.stateSelector || state == 'pause'"
   >
     <div class="arpc-option">
       <div class="arpc-option-segment">Show Presence while Paused</div>
@@ -1943,9 +2205,9 @@
         <div
           class="arpc-option-segment"
           style="cursor: pointer"
-          @click="$emit('sidebar-item', 'general')"
+          @click="$emit('do-action', 'arpc.general.pause')"
         >
-          Use the General Pause Configuration
+          Use the Songs Pause Configuration
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -1961,13 +2223,14 @@
       <div
         :disabled="podcasts.pause.usePauseConfig && !(!podcasts.pause.enabled || !enabled || app.cfg.connectivity.discord_rpc.enabled)"
       >
+        <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            First Line (details)
+            First Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -1982,11 +2245,11 @@
 
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            Second Line (state)
+            Second Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -1999,8 +2262,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          LARGE IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Large Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Large Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="podcasts.pause.largeImage">
@@ -2014,7 +2283,8 @@
 
         <div class="arpc-option" v-show="podcasts.pause.largeImage == 'custom'">
           <div class="arpc-option-segment">
-            Large Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Large Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2029,11 +2299,12 @@
           v-show="podcasts.pause.largeImage != 'disabled'"
         >
           <div class="arpc-option-segment">
-            Large Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Large Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2046,8 +2317,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          SMALL IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Small Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Small Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="podcasts.pause.smallImage">
@@ -2061,7 +2338,8 @@
 
         <div class="arpc-option" v-show="podcasts.pause.smallImage == 'custom'">
           <div class="arpc-option-segment">
-            Small Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Small Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2076,11 +2354,12 @@
           v-show="podcasts.pause.smallImage != 'disabled'"
         >
           <div class="arpc-option-segment">
-            Small Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Small Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2093,6 +2372,7 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">BUTTONS</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">Enable Buttons</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2132,7 +2412,7 @@
                   ><b>Max label length:</b> 30 characters<br />
                   <b>Max URL length:</b> 512 characters<br /><button
                     class="arpc-button arpc-var-button"
-                    @click="$emit('set-modal', 'variables')"
+                    @click="$emit('do-action', 'modal.variables')"
                   >
                     {variables}
                   </button></small
@@ -2167,18 +2447,20 @@
 `,
     data: () => ({
       podcasts: null,
-      enabled: false
+      enabled: false,
+      state: "play",
+      flags: null
     }),
     watch: {
       podcasts() {
         this.$emit("update", "podcasts", this.podcasts);
       },
       data() {
-        [this.podcasts, this.enabled] = this.data;
+        [this.podcasts, this.enabled, this.state, this.flags] = this.data;
       }
     },
     created() {
-      [this.podcasts, this.enabled] = this.data;
+      [this.podcasts, this.enabled, this.state, this.flags] = this.data;
     }
   });
 
@@ -2186,12 +2468,32 @@
     props: ["data"],
     template: `
   <div>
-  <h2 @click="$emit('click-ee', 'videosClickEe')">Videos</h2>
-  <h3>Play</h3>
+  <div class="arpc-settings-header">
+    <h2 @click="$emit('click-ee', 'videosClickEe')">Videos</h2>
+    <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
+  </div>
+
+  <div class="arpc-state-selector" v-if="flags?.stateSelector">
+    <h3
+      :class="{'arpc-selected-state': state === 'play'}"
+      @click="$emit('do-action', 'arpc.videos.play')"
+    >
+      Play
+    </h3>
+    <h3
+      :class="{'arpc-selected-state': state === 'pause'}"
+      @click="$emit('do-action', 'arpc.videos.pause')"
+    >
+      Pause
+    </h3>
+  </div>
+
+  <h3 v-if="!flags?.stateSelector">Play</h3>
 
   <div
     class="arpc-option-container"
     :disabled="app.cfg.connectivity.discord_rpc.enabled || !enabled"
+    v-show="!flags?.stateSelector || state === 'play'"
   >
     <div class="arpc-option">
       <div class="arpc-option-segment">Show Presence on Video Playback</div>
@@ -2207,9 +2509,9 @@
         <div
           class="arpc-option-segment"
           style="cursor: pointer"
-          @click="$emit('sidebar-item', 'general')"
+          @click="$emit('do-action', 'arpc.general.play')"
         >
-          Use the General Playback Configuration
+          Use the Songs Playback Configuration
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -2221,13 +2523,14 @@
       <div
         :disabled="videos.play.usePlayConfig && !(!videos.play.enabled || app.cfg.connectivity.discord_rpc.enabled || !enabled)"
       >
+        <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            First Line (details)
+            First Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2242,11 +2545,11 @@
 
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            Second Line (state)
+            Second Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2272,8 +2575,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          LARGE IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Large Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Large Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="videos.play.largeImage">
@@ -2287,7 +2596,8 @@
 
         <div class="arpc-option" v-show="videos.play.largeImage == 'custom'">
           <div class="arpc-option-segment">
-            Large Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Large Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2299,11 +2609,12 @@
 
         <div class="arpc-option" v-show="videos.play.largeImage != 'disabled'">
           <div class="arpc-option-segment">
-            Large Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Large Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2316,8 +2627,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          SMALL IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Small Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Small Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="videos.play.smallImage">
@@ -2331,7 +2648,8 @@
 
         <div class="arpc-option" v-show="videos.play.smallImage == 'custom'">
           <div class="arpc-option-segment">
-            Small Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Small Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2343,11 +2661,12 @@
 
         <div class="arpc-option" v-show="videos.play.smallImage != 'disabled'">
           <div class="arpc-option-segment">
-            Small Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Small Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2360,6 +2679,7 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">BUTTONS</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">Enable Buttons</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2378,7 +2698,7 @@
                   ><b>Max label length:</b> 30 characters<br />
                   <b>Max URL length:</b> 512 characters<br /><button
                     class="arpc-button arpc-var-button"
-                    @click="$emit('set-modal', 'variables')"
+                    @click="$emit('do-action', 'modal.variables')"
                   >
                     {variables}
                   </button></small
@@ -2409,11 +2729,12 @@
     </div>
   </div>
 
-  <h3>Pause</h3>
+  <h3 v-if="!flags?.stateSelector">Pause</h3>
 
   <div
     class="arpc-option-container"
     :disabled="app.cfg.connectivity.discord_rpc.enabled || !enabled"
+    v-show="!flags?.stateSelector || state == 'pause'"
   >
     <div class="arpc-option">
       <div class="arpc-option-segment">Show Presence while Paused</div>
@@ -2429,9 +2750,9 @@
         <div
           class="arpc-option-segment"
           style="cursor: pointer"
-          @click="$emit('sidebar-item', 'general')"
+          @click="$emit('do-action', 'arpc.general.pause')"
         >
-          Use the General Pause Configuration
+          Use the Songs Pause Configuration
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -2447,13 +2768,14 @@
       <div
         :disabled="videos.pause.usePauseConfig && !(!videos.pause.enabled || !enabled || app.cfg.connectivity.discord_rpc.enabled)"
       >
+        <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            First Line (details)
+            First Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2468,11 +2790,11 @@
 
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            Second Line (state)
+            Second Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2485,8 +2807,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          LARGE IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Large Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Large Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="videos.pause.largeImage">
@@ -2500,7 +2828,8 @@
 
         <div class="arpc-option" v-show="videos.pause.largeImage == 'custom'">
           <div class="arpc-option-segment">
-            Large Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Large Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2512,11 +2841,12 @@
 
         <div class="arpc-option" v-show="videos.pause.largeImage != 'disabled'">
           <div class="arpc-option-segment">
-            Large Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Large Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2529,8 +2859,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          SMALL IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Small Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Small Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="videos.pause.smallImage">
@@ -2544,7 +2880,8 @@
 
         <div class="arpc-option" v-show="videos.pause.smallImage == 'custom'">
           <div class="arpc-option-segment">
-            Small Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Small Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2556,11 +2893,12 @@
 
         <div class="arpc-option" v-show="videos.pause.smallImage != 'disabled'">
           <div class="arpc-option-segment">
-            Small Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Small Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2573,6 +2911,7 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">BUTTONS</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">Enable Buttons</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2612,7 +2951,7 @@
                   ><b>Max label length:</b> 30 characters<br />
                   <b>Max URL length:</b> 512 characters<br /><button
                     class="arpc-button arpc-var-button"
-                    @click="$emit('set-modal', 'variables')"
+                    @click="$emit('do-action', 'modal.variables')"
                   >
                     {variables}
                   </button></small
@@ -2647,18 +2986,20 @@
 `,
     data: () => ({
       videos: null,
-      enabled: false
+      enabled: false,
+      state: "play",
+      flags: null
     }),
     watch: {
       videos() {
         this.$emit("update", "videos", this.videos);
       },
       data() {
-        [this.videos, this.enabled] = this.data;
+        [this.videos, this.enabled, this.state, this.flags] = this.data;
       }
     },
     created() {
-      [this.videos, this.enabled] = this.data;
+      [this.videos, this.enabled, this.state, this.flags] = this.data;
     }
   });
 
@@ -2666,7 +3007,10 @@
     props: ["data"],
     template: `
   <div>
-  <h2 @click="$emit('click-ee', 'radioClickEe')">Radio Stations</h2>
+  <div class="arpc-settings-header">
+    <h2 @click="$emit('click-ee', 'radioClickEe')">Radio Stations</h2>
+    <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
+  </div>
 
   <div
     class="arpc-option-container"
@@ -2686,9 +3030,9 @@
         <div
           class="arpc-option-segment"
           style="cursor: pointer"
-          @click="$emit('sidebar-item', 'general')"
+          @click="$emit('do-action', 'arpc.general.play')"
         >
-          Use the General Playback Configuration
+          Use the Songs Playback Configuration
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -2700,13 +3044,14 @@
       <div
         :disabled="radio.usePlayConfig && !(!radio.enabled || app.cfg.connectivity.discord_rpc.enabled || !enabled)"
       >
+        <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            First Line (details)
+            First Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2721,11 +3066,11 @@
 
         <div class="arpc-option">
           <div class="arpc-option-segment">
-            Second Line (state)
+            Second Line
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2750,8 +3095,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          LARGE IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Large Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Large Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="radio.largeImage">
@@ -2765,7 +3116,8 @@
 
         <div class="arpc-option" v-show="radio.largeImage == 'custom'">
           <div class="arpc-option-segment">
-            Large Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Large Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2777,11 +3129,12 @@
 
         <div class="arpc-option" v-show="radio.largeImage != 'disabled'">
           <div class="arpc-option-segment">
-            Large Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Large Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2794,8 +3147,14 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">
+          SMALL IMAGE
+        </div>
         <div class="arpc-option">
-          <div class="arpc-option-segment">Small Image</div>
+          <div v-if="flags?.categorizedOptions" class="arpc-option-segment">
+            Image
+          </div>
+          <div v-else class="arpc-option-segment">Small Image</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <select class="arpc-select" v-model="radio.smallImage">
@@ -2809,7 +3168,8 @@
 
         <div class="arpc-option" v-show="radio.smallImage == 'custom'">
           <div class="arpc-option-segment">
-            Small Image Key / URL
+            <div v-if="flags?.categorizedOptions">Image Key / URL</div>
+            <div v-else>Small Image Key / URL</div>
             <small>Max 256 characters<br /></small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2821,11 +3181,12 @@
 
         <div class="arpc-option" v-show="radio.smallImage != 'disabled'">
           <div class="arpc-option-segment">
-            Small Image Text
+            <div v-if="flags?.categorizedOptions">Text</div>
+            <div v-else>Small Image Text</div>
             <small
               >Max 128 characters<br /><button
                 class="arpc-button arpc-var-button"
-                @click="$emit('set-modal', 'variables')"
+                @click="$emit('do-action', 'modal.variables')"
               >
                 {variables}
               </button></small
@@ -2838,6 +3199,7 @@
           </div>
         </div>
 
+        <div v-if="flags?.categorizedOptions" class="arpc-label">BUTTONS</div>
         <div class="arpc-option">
           <div class="arpc-option-segment">Enable Buttons</div>
           <div class="arpc-option-segment arpc-option-segment_auto">
@@ -2877,7 +3239,7 @@
                   ><b>Max label length:</b> 30 characters<br />
                   <b>Max URL length:</b> 512 characters<br /><button
                     class="arpc-button arpc-var-button"
-                    @click="$emit('set-modal', 'variables')"
+                    @click="$emit('do-action', 'modal.variables')"
                   >
                     {variables}
                   </button></small
@@ -2912,33 +3274,139 @@
 `,
     data: () => ({
       radio: null,
-      enabled: false
+      enabled: false,
+      flags: null
     }),
     watch: {
       radio() {
         this.$emit("update", "radio", this.radio);
       },
       data() {
-        [this.radio, this.enabled] = this.data;
+        [this.radio, this.enabled, this.flags] = this.data;
       }
     },
     created() {
-      [this.radio, this.enabled] = this.data;
+      [this.radio, this.enabled, this.flags] = this.data;
     }
   });
 
+  Vue.component("arpc-spinner", {
+    template: `
+  <div class="arpc-spinner">
+  <span class="arpc-spinner-inner" role="img" aria-label="Loading"
+    ><span class="arpc-wandering-cubes"
+      ><span class="arpc-cube"></span><span class="arpc-cube"></span></span
+  ></span>
+</div>
+  `
+  });
+
+  Vue.component("arpc-exit-button", {
+    template: `
+  <div class="arpc-exit-button">
+  <div class="arpc-exit-button-icon" @click="exit">
+    <svg
+      aria-hidden="true"
+      role="img"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"
+      ></path>
+    </svg>
+  </div>
+  <div class="arpc-exit-button-keybind">ESC</div>
+</div>
+
+  `,
+    methods: {
+      exit() {
+        app.navigateBack();
+      }
+    }
+  });
+
+  Vue.component("arpc-custom-modal", {
+    template: `
+  <div
+  class="arpc-modal-layer"
+  :id="'arpc-modal-' + modalData?.id"
+  @click.self="$emit('do-action', 'modal.close')"
+>
+  <div class="arpc-modal-window" :style="modalData?.style">
+    <div class="arpc-modal-header">
+      <div>{{modalData?.title}}</div>
+      <arpc-close-button
+        @close="$emit('do-action', 'modal.close')"
+      ></arpc-close-button>
+    </div>
+    <div class="arpc-modal-content">
+      <div v-if="modalHtml" v-html="modalHtml"></div>
+      <div v-else>
+        <arpc-spinner></arpc-spinner>
+      </div>
+    </div>
+
+    <div class="arpc-modal-footer" v-if="modalHtml && modalData?.footer">
+      <div>{{modalData?.footer.text}}</div>
+      <div v-if="modalData?.footer.buttons">
+        <button
+          v-for="(button, index) in modalData.footer.buttons"
+          :key="index"
+          :class="'arpc-button arpc-button-' + (button.type || 'blue')"
+          @click="$emit('do-action', button.action || 'modal.close')"
+        >
+          {{button.text}}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  `,
+    props: ["modalData"],
+    data: () => ({
+      modalHtml: null
+    }),
+    async created() {
+      try {
+        this.modalHtml = await fetch(this.modalData.htmlUrl).then(res => res.text());
+      } catch (error) {
+        this.modalHtml = "Failed fetching modal content.";
+      }
+    },
+    async mounted() {
+      // await AdvancedRpc.checkForUpdates("changelog");
+    },
+    methods: {}
+  });
+
+  let cachedArtwork = {
+    url: "",
+    id: ""
+  };
+  let cachedCustomArtwork = {
+    url: "",
+    id: ""
+  };
   class AdvancedRpcFrontend {
     PLUGIN_NAME = "AdvancedRPC";
     SETTINGS_KEY = "settings";
     FRONTEND_KEY = "frontend";
     remoteData = null;
     versionData = null;
-    installedVersion = "1.6.1";
+    installedVersion = "1.7.0";
+    versionDate = "August 9, 2023";
     changelog = undefined;
     unappliedSettings = false;
     updateInProgress = false;
     artworksUpdate = null;
+    colorslessUpdate = null;
     isDev = false;
+    devUrl = "http://localhost:8123";
+    prodUrl = "https://arpc-api.imvasi.com";
     checkingForUpdate = false;
     gettingRemoteData = false;
     gettingChangelog = false;
@@ -2951,7 +3419,9 @@
       menuEntry.id = window.uuidv4();
       menuEntry.name = "AdvancedRPC";
       menuEntry.onClick = () => {
-        app.appRoute("plugin/advancedrpc");
+        // app.appRoute("plugin/advancedrpc");
+        app.pluginPages.page = "plugin.advancedrpc";
+        window.location.hash = "plugin-renderer";
       };
       CiderFrontAPI.AddMenuEntry(menuEntry);
       this.initSettings();
@@ -2993,10 +3463,9 @@
       if (!settings.imageSize) settings["imageSize"] = "1024";
       if (!settings.play.fallbackImage) settings["play"]["fallbackImage"] = "applemusic";
       if (!settings.pause.fallbackImage) settings["pause"]["fallbackImage"] = "applemusic";
-      if (!settings.applySettings) settings["applySettings"] = "manually";
-      if (settings.applySettings === "state") settings["applySettings"] = "manually";
       if (!settings.removePause) settings["removePause"] = "0";
       if (typeof settings.removeInvalidButtons === "undefined") settings["removeInvalidButtons"] = true;
+      if (typeof settings.icloudArtworks === "undefined") settings["icloudArtworks"] = true;
       if (!settings.podcasts) settings["podcasts"] = {
         play: {
           enabled: true,
@@ -3281,9 +3750,9 @@
           }
         },
         imageSize: "1024",
-        applySettings: "manually",
         removeInvalidButtons: true,
-        removePause: "0"
+        removePause: "0",
+        icloudArtworks: true
       }));
     }
 
@@ -3295,7 +3764,13 @@
           localStorage.setItem(`plugin.${this.PLUGIN_NAME}.${this.FRONTEND_KEY}`, JSON.stringify({
             sidebar: "general",
             theme: "dark",
-            bubblesExpanded: true
+            bubblesExpanded: true,
+            scale: "100",
+            pageStates: {
+              general: "play",
+              videos: "play",
+              podcasts: "play"
+            }
           }));
           return this.getFrontendData();
         } else return JSON.parse(data);
@@ -3313,13 +3788,14 @@
         this.gettingRemoteData = true;
         const frontend = await this.getFrontendData();
         try {
-          this.remoteData = await fetch(`https://${this.isDev ? "dev" : "arpc"}-api.imvasi.com/getRemoteData?src=${src}&version=${this.installedVersion}&theme=${frontend.theme}
+          this.remoteData = await fetch(`${this.isDev ? this.devUrl : this.prodUrl}/getRemoteData?src=${src}&version=${this.installedVersion}&theme=${frontend.theme}
             `).then(response => {
             if (response.status === 200) return response.json();else return null;
           });
           ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.remoteData`, this.remoteData);
           if (this.remoteData?.versionData) {
             this.versionData = this.remoteData.versionData;
+            this.artworksUpdate = this.remoteData.versionData.artworksUpdate;
             if (this.versionData.updateAvailable && this.versionData.updateNotif) {
               const updateNotyf = notyf.error({
                 message: this.versionData.updateNotif.message || "There is a new AdvancedRPC version available!",
@@ -3332,7 +3808,9 @@
                 target,
                 event
               }) => {
-                app.appRoute("plugin/advancedrpc");
+                // app.appRoute("plugin/advancedrpc");
+                app.pluginPages.page = "plugin.advancedrpc";
+                window.location.hash = "plugin-renderer";
               });
             }
           } else {
@@ -3345,20 +3823,26 @@
           console.log(e);
           this.remoteData = null;
           this.versionData = null;
+          this.artworksUpdate = null;
+          this.colorslessUpdate = null;
           this.gettingRemoteData = false;
+          ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.remoteData`, this.remoteData);
           return false;
         }
       }
     }
     async getColorsless(src) {
-      if (!this.gettingColorsless) {
+      if (!this.gettingColorsless && this.versionData?.colorslessUpdate !== this.colorslessUpdate) {
         this.gettingColorsless = true;
         try {
-          const colorsless = await fetch(`https://${this.isDev ? "dev" : "arpc"}-api.imvasi.com/getColorsless?src=${src}&version=${this.installedVersion}
+          const colorsless = await fetch(`${this.isDev ? this.devUrl : this.prodUrl}/getColorsless?src=${src}&version=${this.installedVersion}
             `).then(async response => {
             if (response.status === 200) return response.text();else return null;
           });
-          if (colorsless) ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.colorsless`, colorsless);
+          if (colorsless) {
+            ipcRenderer.invoke(`plugin.${this.PLUGIN_NAME}.colorsless`, colorsless);
+          }
+          this.colorslessUpdate = this.versionData?.colorslessUpdate;
           this.gettingColorsless = false;
           return true;
         } catch (e) {
@@ -3369,11 +3853,11 @@
         }
       }
     }
-    async getChangelog() {
-      if (!this.gettingChangelog) {
+    async getChangelog(src) {
+      if (!this.gettingChangelog && src === "changelog") {
         this.gettingChangelog = true;
         try {
-          const changelog = await fetch("https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/changelog.html").then(async response => response.text());
+          const changelog = await fetch(this.remoteData?.versionData?.changelogUrl ?? "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/changelog.html").then(async response => response.text());
           this.changelog = changelog;
           this.gettingChangelog = false;
           return true;
@@ -3389,9 +3873,9 @@
     async getAnimatedArtworks(src) {
       if (!this.gettingAnimatedArtworks) {
         try {
-          if (this.remoteData?.animatedArtworks) {
+          if (this.remoteData?.flags?.animatedArtworks && !this.remoteData?.animatedArtworksv2?.enabled) {
             this.gettingAnimatedArtworks = true;
-            let artworks = await fetch(`https://${this.isDev ? "dev" : "arpc"}-api.imvasi.com/getArtworks?src=${src}&version=${this.installedVersion}`, {
+            let artworks = await fetch(`${this.isDev ? this.devUrl : this.prodUrl}/getArtworks?src=${src}&version=${this.installedVersion}`, {
               cache: "no-store"
             }).then(response => {
               if (response.status === 200) {
@@ -3416,9 +3900,8 @@
     async checkForUpdates(src) {
       this.checkingForUpdate = true;
       await this.getRemoteData(src);
-      const promises = [this.getAnimatedArtworks(src), this.getChangelog(), this.getColorsless(src)];
+      const promises = [this.getAnimatedArtworks(src), this.getChangelog(src), this.getColorsless(src)];
       await Promise.allSettled(promises);
-      CiderFrontAPI.StyleSheets.Add("./plugins/gh_510140500/advancedrpc.less");
     }
     async update() {
       AdvancedRpc.updateInProgress = true;
@@ -3434,12 +3917,204 @@
     }
   }
   window.AdvancedRpc = new AdvancedRpcFrontend();
-  ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.itemChanged`, (e, data) => {
-    const currentItem = localStorage.getItem("currentTrack");
-    ipcRenderer.invoke(`plugin.${AdvancedRpc.PLUGIN_NAME}.currentItem`, currentItem);
+  ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.itemChanged`, async (e, enabled, cover, icloudSetting, kind, songId, artworkUrl, update) => {
+    const animatedArtworksv2 = AdvancedRpc.remoteData?.animatedArtworksv2,
+      icloudArtworks = AdvancedRpc.remoteData?.icloudArtworks,
+      isDev = AdvancedRpc.isDev;
+    let currentItem = localStorage.getItem("currentTrack");
+    currentItem = currentItem && currentItem !== "undefined" ? JSON.parse(currentItem) : null;
+    if (!currentItem || currentItem === "undefined") return;
+
+    // Get animated artwork
+    if (enabled && !songId?.startsWith("i.") && animatedArtworksv2?.enabled && cover && kind) {
+      let artwork = await getAnimatedArtwork(currentItem?._assets?.[0]?.metadata?.playlistId, animatedArtworksv2);
+      if (artwork === "fetching") {
+        isDev && notyf.error("Return becauce fetching!!");
+        return;
+      }
+      if (!artwork) artwork = currentItem?.attributes?.artwork?.url;
+      currentItem = {
+        ...currentItem,
+        artwork
+      };
+    }
+
+    // Get custom iCloud artwork
+    if (enabled && icloudSetting && songId?.startsWith("i.") && icloudArtworks?.enabled && artworkUrl) {
+      if (artworkUrl.length <= 256) return artworkUrl;
+      let artwork = await getArtworkUrl(songId, artworkUrl, icloudArtworks);
+      if (artwork === "fetching") {
+        isDev && notyf.error("Return becauce fetching!!");
+        return;
+      }
+      isDev && notyf.success(artwork?.url);
+      if (artwork) {
+        currentItem = {
+          ...currentItem,
+          artwork: artwork.url
+        };
+      }
+    }
+    try {
+      currentItem = JSON.stringify(currentItem);
+      await ipcRenderer.invoke(`plugin.${AdvancedRpc.PLUGIN_NAME}.currentItem`, currentItem, update);
+    } catch (error) {
+      console.log(error);
+    }
   });
+
+  /* 
+  We are not fetching on the backend because:
+  1. messes with Cider, makes it skip songs rapidly at random times,
+  2. fetching seems to be slower,
+  3. requires axios, which makes the plugin bigger (fetch/node fetch does not work)
+  */
+  async function getAnimatedArtwork(albumId, animatedArtworksv2) {
+    if (!albumId) return null;
+    const isDev = AdvancedRpc.isDev;
+    if (cachedArtwork.id === albumId && cachedArtwork.url === "fetching") {
+      return "fetching";
+    } else if (cachedArtwork.id === albumId && cachedArtwork.url) {
+      isDev && notyf.success("Using cached animated artwork.");
+      return cachedArtwork.url;
+    } else if (cachedArtwork.id === albumId && !cachedArtwork.url) {
+      return null;
+    }
+    cachedArtwork.id = albumId;
+    cachedArtwork.url = "fetching";
+    try {
+      isDev && notyf.success("Fetching animated artwork.");
+      const now1 = Date.now();
+      const timeout = new Promise((resolve, reject) => {
+        setTimeout(reject, animatedArtworksv2?.timeout ?? 5000, "Animated artwork fetching timed out.");
+      });
+      let request, refId;
+      if (animatedArtworksv2?.stats) {
+        refId = window.uuidv4();
+        request = fetch(`https://arpc-api.imvasi.com/animartwork/${albumId} `, {
+          headers: {
+            "X-Ref-Id": refId
+          }
+        });
+      } else {
+        request = fetch(`https://arpc-api.imvasi.com/animartwork/${albumId}`);
+      }
+      // const request = fetch(`https://arpc-api.imvasi.com/animartwork/${albumId}`);
+
+      const response = await Promise.race([request, timeout]);
+      if (response.status !== 200) {
+        isDev && notyf.error("Animated artwork fetch failed.");
+        return null;
+      }
+      const url = await response.json();
+      isDev && console.log(url);
+      if (!url) return null;
+      if (url === "404") {
+        isDev && notyf.error("Animated artwork not found.");
+        cachedArtwork.id = albumId;
+        cachedArtwork.url = null;
+        return null;
+      }
+      const now2 = Date.now();
+      isDev && notyf.success(`Animated artwork took ${now2 - now1}ms.`);
+      if (animatedArtworksv2.stats) {
+        stats(now2 - now1, "animartwork", refId);
+      }
+      cachedArtwork.url = url;
+      cachedArtwork.id = albumId;
+      return url;
+    } catch (error) {
+      console.log(error);
+      cachedArtwork.id = albumId;
+      cachedArtwork.url = null;
+      stats("ERROR", "animartwork");
+      return null;
+    }
+  }
+  async function getArtworkUrl(songId, customArtwork, icloudArtworks) {
+    if (!customArtwork) return null;
+    const isDev = AdvancedRpc.isDev;
+    if (cachedCustomArtwork.id === songId && cachedCustomArtwork.url === "fetching") {
+      return "fetching";
+    } else if (cachedCustomArtwork.id === songId && cachedCustomArtwork.url) {
+      isDev && notyf.success("Using cached custom artwork.");
+      return cachedCustomArtwork.url;
+    } else if (cachedCustomArtwork.id === songId && !cachedCustomArtwork.url) {
+      return null;
+    }
+    cachedCustomArtwork.id = songId;
+    cachedCustomArtwork.url = "fetching";
+    try {
+      isDev && notyf.success("Fetching custom artwork.");
+      const now1 = Date.now();
+      const timeout = new Promise((resolve, reject) => {
+        setTimeout(reject, icloudArtworks?.timeout ?? 5000, "Custom artwork fetching timed out.");
+      });
+      let request, refId;
+      if (icloudArtworks?.stats) {
+        refId = window.uuidv4();
+        request = fetch(`https://arpc-api.imvasi.com/artwork/`, {
+          method: "POST",
+          body: JSON.stringify({
+            imageUrl: customArtwork
+          }),
+          headers: {
+            "Content-Type": "application/json",
+            "X-Ref-Id": refId
+          }
+        });
+      } else {
+        request = fetch(`https://arpc-api.imvasi.com/artwork/`, {
+          method: "POST",
+          body: JSON.stringify({
+            imageUrl: customArtwork
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+      }
+      const response = await Promise.race([request, timeout]);
+      if (response.status !== 200) {
+        isDev && notyf.error("Custom artwork fetch failed.");
+        return null;
+      }
+      const url = await response.json();
+      isDev && console.log(url);
+      if (!url) return null;
+      const now2 = Date.now();
+      isDev && notyf.success(`Custom artwork took ${now2 - now1}ms.`);
+      if (icloudArtworks.stats) {
+        stats(now2 - now1, "artwork", refId);
+      }
+      cachedCustomArtwork.url = url;
+      cachedCustomArtwork.id = songId;
+      return url;
+    } catch (error) {
+      console.log(error);
+      cachedCustomArtwork.id = songId;
+      cachedCustomArtwork.url = null;
+      stats("ERROR", "artwork");
+      return null;
+    }
+  }
   ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.consoleLog`, (e, data) => {
     console.log(data);
   });
+  ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.setcss`, (e, data) => {
+    CiderFrontAPI.StyleSheets.Add("./plugins/gh_510140500/advancedrpc.less");
+  });
+  async function stats(ms, type, refId) {
+    await fetch(`https://arpc-api.imvasi.com/stats/${type}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Ref-Id": refId
+      },
+      body: JSON.stringify({
+        ms
+      })
+    });
+  }
 
 })();

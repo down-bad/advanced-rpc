@@ -37,6 +37,7 @@
   --arpc-header: #fff;
   --arpc-footer-text: #b8b9bf;
   --arpc-bubble-text: #e0e1e5;
+  --arpc-wandering-cube: #7983f5;
 
   --arpc-modal-header: #fff;
   --arpc-modal-subtitle: #b8b9bf;
@@ -93,9 +94,22 @@
   --arpc-button-red-hover-text: #fff;
   --arpc-button-red-active: #8c2729;
   --arpc-button-red-active-text: #fff;
+
+  --arpc-button-exit: #b5bac1;
+  --arpc-button-exit-hover: #dbdee1;
+  --arpc-button-exit-hover-bg: #4e50584d;
+  --arpc-button-exit-active: #ffffff;
+  --arpc-button-exit-active-bg: #4e50587a;
+
+  --arpc-input-border-radius: 3px;
+  --arpc-input-box-shadow: none;
+  --arpc-input-border: none;
+
 }
 
 .advancedrpc {
+  height: 100vh;
+
   * {
     font-family: "gg sans", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
   }
@@ -159,12 +173,12 @@
     height: 40px;
     font-size: 16px;
     box-sizing: border-box;
-    border-radius: 3px !important;
+    border-radius: var(--arpc-input-border-radius) !important;
     color: var(--arpc-text-input);
     background-color: initial !important;
     background: var(--arpc-dark) !important;
-    box-shadow: none !important;
-    border: none !important;
+    box-shadow: var(--arpc-input-box-shadow) !important;
+    border: var(--arpc-input-border) !important;
     transition: border-color 0.2s ease-in-out;
   }
 }
@@ -199,9 +213,8 @@
   }
 
   h3 {
-    margin: 0;
     margin-bottom: 10px;
-    margin-top: 40px;
+    margin-top: 30px;
     font-size: 20px;
   }
 }
@@ -241,8 +254,35 @@
   }
 }
 
+.arpc-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.arpc-footer {
+  display: flex;
+  flex-direction: column;
+  margin-left: 5px;
+  margin-top: 8px;
+
+  .arpc-footer-item {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--arpc-footer-text);
+    opacity: 25%;
+    margin-top: 2px;
+  }
+
+  .arpc-footer-item:hover {
+    opacity: 50%;
+    cursor: pointer;
+  }
+}
+
 .arpc-sidebar {
-  height: calc(100% - var(--chromeHeight2));
+  height: calc(100vh - var(--chromeHeight2));
   width: 220px;
   position: fixed;
   z-index: 1;
@@ -442,6 +482,31 @@
   }
 }
 
+.arpc-state-selector {
+  display: flex;
+  margin-bottom: 10px;
+
+  .arpc-selected-state {
+    opacity: 100%;
+  }
+
+  .arpc-selected-state:hover {
+    cursor: default;
+    opacity: 100%;
+  }
+
+  h3 {
+    margin: 0;
+    margin-right: 10px;
+    opacity: 30%;
+  }
+
+  h3:hover {
+    opacity: 75%;
+    cursor: pointer;
+  }
+}
+
 .arpc-option {
   color: var(--arpc-text-primary);
   line-height: 24px;
@@ -487,6 +552,16 @@
 
   .arpc-option {
     border-bottom: 1px solid var(--arpc-divider);
+
+    .arpc-label {
+      margin-top: 0;
+      margin-bottom: 3px;
+    }
+  }
+
+  .arpc-label {
+    margin-top: 40px;
+    margin-bottom: 0;
   }
 }
 
@@ -548,6 +623,11 @@
     flex: 1;
     align-self: center;
     color: var(--arpc-bubble-text);
+
+    .arpc-bubble-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
   }
 
   .arpc-bubble-icon {
@@ -710,7 +790,6 @@
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1050;
   width: 100vw;
   height: 100vh;
   z-index: 999;
@@ -854,6 +933,24 @@
         word-break: break-all;
       }
     }
+
+    .arpc-changelog-divider {
+      color: var(--arpc-changelog-divider);
+      margin: 10px 0;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+    }
+
+    .arpc-changelog-divider:after {
+      background: var(--arpc-changelog-divider);
+      content: "";
+      height: 1px;
+      flex: 1 1 auto;
+      margin-left: 4px;
+      opacity: 0.6;
+    }
   }
 
   .arpc-changelog-window {
@@ -862,24 +959,6 @@
 
     .arpc-modal-content {
       color: var(--arpc-changelog);
-
-      .arpc-changelog-divider {
-        color: var(--arpc-changelog-divider);
-        margin: 10px 0;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        font-weight: 700;
-      }
-
-      .arpc-changelog-divider:after {
-        background: var(--arpc-changelog-divider);
-        content: "";
-        height: 1px;
-        flex: 1 1 auto;
-        margin-left: 4px;
-        opacity: 0.6;
-      }
     }
 
     .arpc-modal-footer button {
@@ -919,6 +998,115 @@
 
 .arpc-expandable {
   cursor: pointer;
+}
+
+.arpc-spinner {
+  align-items: center;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+  padding: 50px;
+
+  .arpc-spinner-inner {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .arpc-wandering-cubes {
+      position: relative;
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      contain: paint;
+
+      .arpc-cube {
+        background-color: var(--arpc-wandering-cube);
+        width: 10px;
+        height: 10px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        animation: arpc-spinner-wandering-cubes 1.8s ease-in-out infinite;
+      }
+
+      .arpc-cube:last-child {
+        animation-delay: -0.9s;
+      }
+    }
+  }
+}
+
+.arpc-exit-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .arpc-exit-button-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 0 0 36px;
+    border-width: 2px;
+    border-style: solid;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    color: var(--arpc-button-exit);
+
+    svg {
+      path {
+        fill: currentColor;
+      }
+    }
+  }
+
+  .arpc-exit-button-keybind {
+    margin-top: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    text-align: center;
+    color: var(--arpc-button-exit);
+  }
+
+  .arpc-exit-button-icon:hover + .arpc-exit-button-keybind {
+    color: var(--arpc-button-exit-hover);
+  }
+
+  .arpc-exit-button-icon:hover {
+    background-color: var(--arpc-button-exit-hover-bg);
+    color: var(--arpc-button-exit-hover);
+  }
+
+  .arpc-exit-button-icon:active + .arpc-exit-button-keybind {
+    color: var(--arpc-button-exit-active);
+  }
+
+  .arpc-exit-button-icon:active {
+    background-color: var(--arpc-button-exit-active-bg);
+    color: var(--arpc-button-exit-active);
+    transform: translateY(1px);
+  }
+}
+
+@keyframes arpc-spinner-wandering-cubes {
+  25% {
+    transform: translateX(22px) rotate(-90deg) scale(0.5);
+  }
+  50% {
+    transform: translateX(22px) translateY(22px) rotate(-180deg);
+  }
+  75% {
+    transform: translateX(0) translateY(22px) rotate(-270deg) scale(0.5);
+  }
+  100% {
+    transform: rotate(-1turn);
+  }
 }
 
 // Top Bar Slide
