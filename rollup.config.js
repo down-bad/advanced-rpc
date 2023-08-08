@@ -60,7 +60,11 @@ export default defineConfig([
         "jsnext:main": true,
       }),
       json(),
-      versionInjector(),
+      versionInjector({
+        injectInTags: {
+          dateFormat: "longDate",
+        },
+      }),
     ],
   },
 ]);

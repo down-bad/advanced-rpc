@@ -10,11 +10,13 @@ export default Vue.component("arpc-changelog", {
       <div>What's New</div>
       <arpc-close-button @close="$emit('close-changelog')"></arpc-close-button>
     </div>
-    <div
-      class="arpc-modal-content"
-      id="arpc-changelog"
-      v-html="changelog"
-    ></div>
+    <div class="arpc-modal-content" id="arpc-changelog">
+      <div v-if="changelog" v-html="changelog"></div>
+      <div v-else>
+        <arpc-spinner></arpc-spinner>
+      </div>
+    </div>
+
     <div class="arpc-modal-footer">
       <div v-if="gettingRemoteData">Checking for updates...</div>
       <div v-else-if="versionData && versionData.updateAvailable">
@@ -35,9 +37,7 @@ export default Vue.component("arpc-changelog", {
         </div>
         <div v-else>No update available.</div>
 
-        <div
-          v-if="remoteData?.animatedArtworks && !remoteData?.hideLastArtworkUpdate"
-        >
+        <div v-if="!remoteData?.flags?.hideLastArtworkUpdate">
           <div v-if="gettingAnimatedArtworks">
             Checking animated artworks...
           </div>
@@ -100,6 +100,15 @@ export default Vue.component("arpc-changelog", {
   },
   methods: {
     update() {
+      if (
+        this.updating ||
+        !this.versionData ||
+        !this.versionData.updateAvailable ||
+        this.gettingRemoteData
+      ) {
+        return;
+      }
+
       AdvancedRpc.update();
     },
   },

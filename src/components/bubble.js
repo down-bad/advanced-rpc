@@ -1,6 +1,8 @@
 export default Vue.component("arpc-bubble", {
   props: [
+    "id",
     "enabled",
+    "title",
     "message",
     "url",
     "icon",
@@ -12,6 +14,7 @@ export default Vue.component("arpc-bubble", {
   template: `
   <div
   class="arpc-bubble"
+  :id="id &&  'arpc-bubble-' + id"
   :style="{'border-color': color, 'background': backgroundColor || color + '1a', 'cursor': url ? 'pointer' : 'default'}"
   @click="url && $emit('do-action', url)"
 >
@@ -59,7 +62,8 @@ export default Vue.component("arpc-bubble", {
     </svg>
   </div>
   <div class="arpc-bubble-text" :style="{'color': textColor || ''}">
-    {{message}}
+    <div v-if="title" class="arpc-bubble-title">{{title}}</div>
+    <div>{{message}}</div>
   </div>
 </div>
 

@@ -10,6 +10,9 @@ import General from "./components/settings-general.js";
 import Podcasts from "./components/settings-podcasts.js";
 import Videos from "./components/settings-videos.js";
 import Radio from "./components/settings-radio.js";
+import Spinner from "./components/spinner.js";
+import ExitButton from "./components/exit-button.js";
+import CustomModal from "./components/custom-modal.js";
 
 // To remove "import not used" warnings
 Frontend;
@@ -24,6 +27,19 @@ General;
 Podcasts;
 Videos;
 Radio;
+Spinner;
+ExitButton;
+CustomModal;
+
+let cachedArtwork = {
+  url: "",
+  id: "",
+};
+
+let cachedCustomArtwork = {
+  url: "",
+  id: "",
+};
 
 class AdvancedRpcFrontend {
   PLUGIN_NAME = "AdvancedRPC";
@@ -33,11 +49,15 @@ class AdvancedRpcFrontend {
   remoteData = null;
   versionData = null;
   installedVersion = "[VI]{version}[/VI]";
+  versionDate = "[VI]{date}[/VI]";
   changelog = undefined;
   unappliedSettings = false;
   updateInProgress = false;
   artworksUpdate = null;
+  colorslessUpdate = null;
   isDev = false;
+  devUrl = "http://localhost:8123";
+  prodUrl = "https://arpc-api.imvasi.com";
 
   checkingForUpdate = false;
   gettingRemoteData = false;
@@ -53,7 +73,9 @@ class AdvancedRpcFrontend {
     menuEntry.id = window.uuidv4();
     menuEntry.name = "AdvancedRPC";
     menuEntry.onClick = () => {
-      app.appRoute("plugin/advancedrpc");
+      // app.appRoute("plugin/advancedrpc");
+      app.pluginPages.page = "plugin.advancedrpc";
+      window.location.hash = "plugin-renderer";
     };
     CiderFrontAPI.AddMenuEntry(menuEntry);
 
@@ -115,13 +137,13 @@ class AdvancedRpcFrontend {
       settings["play"]["fallbackImage"] = "applemusic";
     if (!settings.pause.fallbackImage)
       settings["pause"]["fallbackImage"] = "applemusic";
-    if (!settings.applySettings) settings["applySettings"] = "manually";
-    if (settings.applySettings === "state")
-      settings["applySettings"] = "manually";
     if (!settings.removePause) settings["removePause"] = "0";
 
     if (typeof settings.removeInvalidButtons === "undefined")
       settings["removeInvalidButtons"] = true;
+
+    if (typeof settings.icloudArtworks === "undefined")
+      settings["icloudArtworks"] = true;
 
     if (!settings.podcasts)
       settings["podcasts"] = {
@@ -415,9 +437,9 @@ class AdvancedRpcFrontend {
           },
         },
         imageSize: "1024",
-        applySettings: "manually",
         removeInvalidButtons: true,
         removePause: "0",
+        icloudArtworks: true,
       })
     );
   }
@@ -435,6 +457,12 @@ class AdvancedRpcFrontend {
             sidebar: "general",
             theme: "dark",
             bubblesExpanded: true,
+            scale: "100",
+            pageStates: {
+              general: "play",
+              videos: "play",
+              podcasts: "play",
+            },
           })
         );
         return this.getFrontendData();
@@ -458,11 +486,11 @@ class AdvancedRpcFrontend {
       const frontend = await this.getFrontendData();
       try {
         this.remoteData = await fetch(
-          `https://${
-            this.isDev ? "dev" : "arpc"
-          }-api.imvasi.com/getRemoteData?src=${src}&version=${
-            this.installedVersion
-          }&theme=${frontend.theme}
+          `${
+            this.isDev ? this.devUrl : this.prodUrl
+          }/getRemoteData?src=${src}&version=${this.installedVersion}&theme=${
+            frontend.theme
+          }
             `
         ).then((response) => {
           if (response.status === 200) return response.json();
@@ -475,6 +503,7 @@ class AdvancedRpcFrontend {
 
         if (this.remoteData?.versionData) {
           this.versionData = this.remoteData.versionData;
+          this.artworksUpdate = this.remoteData.versionData.artworksUpdate;
 
           if (
             this.versionData.updateAvailable &&
@@ -490,7 +519,9 @@ class AdvancedRpcFrontend {
               dismissible: true,
             });
             updateNotyf.on("click", ({ target, event }) => {
-              app.appRoute("plugin/advancedrpc");
+              // app.appRoute("plugin/advancedrpc");
+              app.pluginPages.page = "plugin.advancedrpc";
+              window.location.hash = "plugin-renderer";
             });
           }
         } else {
@@ -506,32 +537,41 @@ class AdvancedRpcFrontend {
         console.log(e);
         this.remoteData = null;
         this.versionData = null;
+        this.artworksUpdate = null;
+        this.colorslessUpdate = null;
         this.gettingRemoteData = false;
+        ipcRenderer.invoke(
+          `plugin.${this.PLUGIN_NAME}.remoteData`,
+          this.remoteData
+        );
         return false;
       }
     }
   }
 
   async getColorsless(src) {
-    if (!this.gettingColorsless) {
+    if (
+      !this.gettingColorsless &&
+      this.versionData?.colorslessUpdate !== this.colorslessUpdate
+    ) {
       this.gettingColorsless = true;
       try {
         const colorsless = await fetch(
-          `https://${
-            this.isDev ? "dev" : "arpc"
-          }-api.imvasi.com/getColorsless?src=${src}&version=${
-            this.installedVersion
-          }
+          `${
+            this.isDev ? this.devUrl : this.prodUrl
+          }/getColorsless?src=${src}&version=${this.installedVersion}
             `
         ).then(async (response) => {
           if (response.status === 200) return response.text();
           else return null;
         });
-        if (colorsless)
+        if (colorsless) {
           ipcRenderer.invoke(
             `plugin.${this.PLUGIN_NAME}.colorsless`,
             colorsless
           );
+        }
+        this.colorslessUpdate = this.versionData?.colorslessUpdate;
         this.gettingColorsless = false;
         return true;
       } catch (e) {
@@ -545,12 +585,13 @@ class AdvancedRpcFrontend {
     }
   }
 
-  async getChangelog() {
-    if (!this.gettingChangelog) {
+  async getChangelog(src) {
+    if (!this.gettingChangelog && src === "changelog") {
       this.gettingChangelog = true;
       try {
         const changelog = await fetch(
-          "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/changelog.html"
+          this.remoteData?.versionData?.changelogUrl ??
+            "https://raw.githubusercontent.com/down-bad/advanced-rpc/dev-main/remote/changelog.html"
         ).then(async (response) => response.text());
         this.changelog = changelog;
         this.gettingChangelog = false;
@@ -568,14 +609,15 @@ class AdvancedRpcFrontend {
   async getAnimatedArtworks(src) {
     if (!this.gettingAnimatedArtworks) {
       try {
-        if (this.remoteData?.animatedArtworks) {
+        if (
+          this.remoteData?.flags?.animatedArtworks &&
+          !this.remoteData?.animatedArtworksv2?.enabled
+        ) {
           this.gettingAnimatedArtworks = true;
           let artworks = await fetch(
-            `https://${
-              this.isDev ? "dev" : "arpc"
-            }-api.imvasi.com/getArtworks?src=${src}&version=${
-              this.installedVersion
-            }`,
+            `${
+              this.isDev ? this.devUrl : this.prodUrl
+            }/getArtworks?src=${src}&version=${this.installedVersion}`,
             {
               cache: "no-store",
             }
@@ -609,13 +651,11 @@ class AdvancedRpcFrontend {
 
     const promises = [
       this.getAnimatedArtworks(src),
-      this.getChangelog(),
+      this.getChangelog(src),
       this.getColorsless(src),
     ];
 
     await Promise.allSettled(promises);
-
-    CiderFrontAPI.StyleSheets.Add("./plugins/gh_510140500/advancedrpc.less");
   }
 
   async update() {
@@ -637,14 +677,283 @@ class AdvancedRpcFrontend {
 
 window.AdvancedRpc = new AdvancedRpcFrontend();
 
-ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.itemChanged`, (e, data) => {
-  const currentItem = localStorage.getItem("currentTrack");
-  ipcRenderer.invoke(
-    `plugin.${AdvancedRpc.PLUGIN_NAME}.currentItem`,
-    currentItem
-  );
-});
+ipcRenderer.on(
+  `plugin.${AdvancedRpc.PLUGIN_NAME}.itemChanged`,
+  async (
+    e,
+    enabled,
+    cover,
+    icloudSetting,
+    kind,
+    songId,
+    artworkUrl,
+    update
+  ) => {
+    const animatedArtworksv2 = AdvancedRpc.remoteData?.animatedArtworksv2,
+      icloudArtworks = AdvancedRpc.remoteData?.icloudArtworks,
+      isDev = AdvancedRpc.isDev;
+
+    let currentItem = localStorage.getItem("currentTrack");
+    currentItem =
+      currentItem && currentItem !== "undefined"
+        ? JSON.parse(currentItem)
+        : null;
+
+    if (!currentItem || currentItem === "undefined") return;
+
+    // Get animated artwork
+    if (
+      enabled &&
+      !songId?.startsWith("i.") &&
+      animatedArtworksv2?.enabled &&
+      cover &&
+      kind
+    ) {
+      let artwork = await getAnimatedArtwork(
+        currentItem?._assets?.[0]?.metadata?.playlistId,
+        animatedArtworksv2
+      );
+
+      if (artwork === "fetching") {
+        isDev && notyf.error("Return becauce fetching!!");
+        return;
+      }
+
+      if (!artwork) artwork = currentItem?.attributes?.artwork?.url;
+
+      currentItem = {
+        ...currentItem,
+        artwork,
+      };
+    }
+
+    // Get custom iCloud artwork
+    if (
+      enabled &&
+      icloudSetting &&
+      songId?.startsWith("i.") &&
+      icloudArtworks?.enabled &&
+      artworkUrl
+    ) {
+      if (artworkUrl.length <= 256) return artworkUrl;
+
+      let artwork = await getArtworkUrl(songId, artworkUrl, icloudArtworks);
+
+      if (artwork === "fetching") {
+        isDev && notyf.error("Return becauce fetching!!");
+        return;
+      }
+
+      isDev && notyf.success(artwork?.url);
+
+      if (artwork) {
+        currentItem = {
+          ...currentItem,
+          artwork: artwork.url,
+        };
+      }
+    }
+
+    try {
+      currentItem = JSON.stringify(currentItem);
+      await ipcRenderer.invoke(
+        `plugin.${AdvancedRpc.PLUGIN_NAME}.currentItem`,
+        currentItem,
+        update
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  }
+);
+
+/* 
+We are not fetching on the backend because:
+1. messes with Cider, makes it skip songs rapidly at random times,
+2. fetching seems to be slower,
+3. requires axios, which makes the plugin bigger (fetch/node fetch does not work)
+*/
+async function getAnimatedArtwork(albumId, animatedArtworksv2) {
+  if (!albumId) return null;
+  const isDev = AdvancedRpc.isDev;
+
+  if (cachedArtwork.id === albumId && cachedArtwork.url === "fetching") {
+    return "fetching";
+  } else if (cachedArtwork.id === albumId && cachedArtwork.url) {
+    isDev && notyf.success("Using cached animated artwork.");
+    return cachedArtwork.url;
+  } else if (cachedArtwork.id === albumId && !cachedArtwork.url) {
+    return null;
+  }
+
+  cachedArtwork.id = albumId;
+  cachedArtwork.url = "fetching";
+
+  try {
+    isDev && notyf.success("Fetching animated artwork.");
+    const now1 = Date.now();
+    const timeout = new Promise((resolve, reject) => {
+      setTimeout(
+        reject,
+        animatedArtworksv2?.timeout ?? 5000,
+        "Animated artwork fetching timed out."
+      );
+    });
+
+    let request, refId;
+    if (animatedArtworksv2?.stats) {
+      refId = window.uuidv4();
+      request = fetch(`https://arpc-api.imvasi.com/animartwork/${albumId} `, {
+        headers: {
+          "X-Ref-Id": refId,
+        },
+      });
+    } else {
+      request = fetch(`https://arpc-api.imvasi.com/animartwork/${albumId}`);
+    }
+    // const request = fetch(`https://arpc-api.imvasi.com/animartwork/${albumId}`);
+
+    const response = await Promise.race([request, timeout]);
+
+    if (response.status !== 200) {
+      isDev && notyf.error("Animated artwork fetch failed.");
+      return null;
+    }
+
+    const url = await response.json();
+
+    isDev && console.log(url);
+
+    if (!url) return null;
+
+    if (url === "404") {
+      isDev && notyf.error("Animated artwork not found.");
+      cachedArtwork.id = albumId;
+      cachedArtwork.url = null;
+      return null;
+    }
+
+    const now2 = Date.now();
+
+    isDev && notyf.success(`Animated artwork took ${now2 - now1}ms.`);
+
+    if (animatedArtworksv2.stats) {
+      stats(now2 - now1, "animartwork", refId);
+    }
+
+    cachedArtwork.url = url;
+    cachedArtwork.id = albumId;
+    return url;
+  } catch (error) {
+    console.log(error);
+    cachedArtwork.id = albumId;
+    cachedArtwork.url = null;
+    stats("ERROR", "animartwork");
+    return null;
+  }
+}
+
+async function getArtworkUrl(songId, customArtwork, icloudArtworks) {
+  if (!customArtwork) return null;
+  const isDev = AdvancedRpc.isDev;
+
+  if (
+    cachedCustomArtwork.id === songId &&
+    cachedCustomArtwork.url === "fetching"
+  ) {
+    return "fetching";
+  } else if (cachedCustomArtwork.id === songId && cachedCustomArtwork.url) {
+    isDev && notyf.success("Using cached custom artwork.");
+    return cachedCustomArtwork.url;
+  } else if (cachedCustomArtwork.id === songId && !cachedCustomArtwork.url) {
+    return null;
+  }
+
+  cachedCustomArtwork.id = songId;
+  cachedCustomArtwork.url = "fetching";
+
+  try {
+    isDev && notyf.success("Fetching custom artwork.");
+    const now1 = Date.now();
+    const timeout = new Promise((resolve, reject) => {
+      setTimeout(
+        reject,
+        icloudArtworks?.timeout ?? 5000,
+        "Custom artwork fetching timed out."
+      );
+    });
+
+    let request, refId;
+    if (icloudArtworks?.stats) {
+      refId = window.uuidv4();
+      request = fetch(`https://arpc-api.imvasi.com/artwork/`, {
+        method: "POST",
+        body: JSON.stringify({ imageUrl: customArtwork }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Ref-Id": refId,
+        },
+      });
+    } else {
+      request = fetch(`https://arpc-api.imvasi.com/artwork/`, {
+        method: "POST",
+        body: JSON.stringify({ imageUrl: customArtwork }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+
+    const response = await Promise.race([request, timeout]);
+
+    if (response.status !== 200) {
+      isDev && notyf.error("Custom artwork fetch failed.");
+      return null;
+    }
+
+    const url = await response.json();
+
+    isDev && console.log(url);
+
+    if (!url) return null;
+
+    const now2 = Date.now();
+
+    isDev && notyf.success(`Custom artwork took ${now2 - now1}ms.`);
+
+    if (icloudArtworks.stats) {
+      stats(now2 - now1, "artwork", refId);
+    }
+
+    cachedCustomArtwork.url = url;
+    cachedCustomArtwork.id = songId;
+    return url;
+  } catch (error) {
+    console.log(error);
+    cachedCustomArtwork.id = songId;
+    cachedCustomArtwork.url = null;
+    stats("ERROR", "artwork");
+    return null;
+  }
+}
 
 ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.consoleLog`, (e, data) => {
   console.log(data);
 });
+
+ipcRenderer.on(`plugin.${AdvancedRpc.PLUGIN_NAME}.setcss`, (e, data) => {
+  CiderFrontAPI.StyleSheets.Add("./plugins/gh_510140500/advancedrpc.less");
+});
+
+async function stats(ms, type, refId) {
+  await fetch(`https://arpc-api.imvasi.com/stats/${type}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Ref-Id": refId,
+    },
+    body: JSON.stringify({
+      ms,
+    }),
+  });
+}

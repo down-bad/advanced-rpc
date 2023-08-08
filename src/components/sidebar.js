@@ -20,6 +20,7 @@ export default Vue.component("arpc-sidebar", {
     <div
       v-for="item in sideBarItems?.upper"
       :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && versionData?.updateAvailable}"
+      :id="item.id && 'arpc-sidebar-item-' + item.id"
       @click="$emit('do-action', item)"
     >
       {{ item.dest === 'modal.changelog' && versionData?.updateAvailable ?
@@ -37,6 +38,7 @@ export default Vue.component("arpc-sidebar", {
     <div
       v-for="item in sideBarItems?.lower"
       :class="{'arpc-sidebar-item': item.id !== 'separator' && item.id !== 'eyebrow', 'arpc-sidebar-separator': item.id === 'separator', 'arpc-sidebar-eyebrow': item.id === 'eyebrow', 'arpc-sidebar-selected': frontend.sidebar === item.id, 'arpc-sidebar-blue': item.dest === 'modal.changelog' && versionData?.updateAvailable}"
+      :id="item.id && 'arpc-sidebar-item-' + item.id"
       @click="$emit('do-action', item)"
     >
       {{ item.dest === 'modal.changelog' && versionData?.updateAvailable ?
@@ -50,7 +52,21 @@ export default Vue.component("arpc-sidebar", {
       </div>
     </div>
 
-    <footer @click="openLink('https://github.com/down-bad/advanced-rpc')">
+    <div v-if="computedRemoteData?.footers" class="arpc-footer">
+      <div
+        v-for="footer in computedRemoteData?.footers"
+        class="arpc-footer-item"
+        :id="'arpc-footer-item-' + footer.id"
+        :style="{pointerEvents: footer.dest ? 'auto' : 'none'}"
+        @click="$emit('do-action', footer.dest)"
+      >
+        {{ footerText(footer.text) }}
+      </div>
+    </div>
+    <footer
+      v-else
+      @click="openLink('https://github.com/down-bad/advanced-rpc')"
+    >
       {{ versionInfo }}
     </footer>
   </div>
@@ -66,6 +82,8 @@ export default Vue.component("arpc-sidebar", {
   ],
   data: () => ({
     sideBarItems: null,
+    version: null,
+    versionDate: null,
   }),
   computed: {
     computedRemoteData() {
@@ -76,8 +94,16 @@ export default Vue.component("arpc-sidebar", {
   },
   created() {
     this.sidebarItems(this.computedRemoteData);
+
+    this.version = AdvancedRpc.installedVersion;
+    this.versionDate = AdvancedRpc.versionDate;
   },
   methods: {
+    footerText(text) {
+      return text
+        .replaceAll("$version", this.version)
+        .replaceAll("$date", this.versionDate);
+    },
     sidebarItems(remoteData) {
       this.sideBarItems = remoteData?.sideBarItems;
 
@@ -85,7 +111,7 @@ export default Vue.component("arpc-sidebar", {
         this.sideBarItems = {
           upper: [
             {
-              text: "General",
+              text: "Songs",
               dest: "arpc.general",
               id: "general",
             },
@@ -111,6 +137,10 @@ export default Vue.component("arpc-sidebar", {
             },
           ],
           lower: [
+            {
+              text: "Variables",
+              dest: "modal.variables",
+            },
             {
               text: "Changelog",
               updateText: "Update available!",

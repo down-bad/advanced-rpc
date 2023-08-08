@@ -20,6 +20,13 @@ export default Vue.component("plugin.advancedrpc", {
       @close-modal="setModal('')"
     />
 
+    <arpc-custom-modal
+      v-if="modal?.startsWith('custom-')"
+      :modal="modal"
+      :modalData="remoteData?.modals?.find((m) => m.id === modal)"
+      @do-action="doAction"
+    />
+
     <arpc-artwork-request
       v-if="modal === 'artwork-request'"
       @close-modal="setModal('')"
@@ -33,17 +40,12 @@ export default Vue.component("plugin.advancedrpc", {
   <div class="arpc-page">
     <Transition name="arpc-slide">
       <div class="arpc-unapplied-settings-alert" v-show="unappliedSettings">
-        <div class="arpc-unapplied-settings-content">
-          <div v-if="settings.applySettings === 'state'">
-            Your changes will apply on playback state change. Apply now?
-          </div>
-          <div
-            @click="clickingEe('unappliedTextEe')"
-            v-else-if="settings.applySettings === 'manually'"
-          >
-            You've made changes, apply them to update your Discord presence.
-          </div>
-          <div v-else>;)</div>
+        <div
+          @click="clickingEe('unappliedTextEe')"
+          class="arpc-unapplied-settings-content"
+          :style="settingsStyle"
+        >
+          <div>Apply your changes to update your Discord presence.</div>
           <div class="arpc-unapplied-settings-options">
             <button
               class="arpc-button arpc-button-underline"
@@ -62,7 +64,7 @@ export default Vue.component("plugin.advancedrpc", {
       </div></Transition
     >
 
-    <div class="arpc-settings">
+    <div class="arpc-settings" :style="settingsStyle">
       <arpc-sidebar
         :installedVersion="installedVersion"
         :versionData="versionData"
@@ -71,10 +73,11 @@ export default Vue.component("plugin.advancedrpc", {
         :frontend="frontend"
         @do-action="doAction"
         @click-ee="clickingEe"
+        :style="sidebarScaleStyle"
       ></arpc-sidebar>
 
       <div class="arpc-content">
-        <Transition name="arpc-settings-slide">
+        <!-- <Transition name="arpc-settings-slide">
           <div
             class="arpc-bubbles-bar arpc-expandable"
             @click="toggleBubbles()"
@@ -90,75 +93,80 @@ export default Vue.component("plugin.advancedrpc", {
             <arpc-expand-button
               :expanded="frontend.bubblesExpanded"
             ></arpc-expand-button></div
+        ></Transition> -->
+
+        <Transition name="arpc-settings-slide">
+          <arpc-bubble
+            v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
+            v-bind="privateSessionBubble"
+          ></arpc-bubble>
+        </Transition>
+
+        <Transition name="arpc-settings-slide">
+          <arpc-bubble
+            v-if="app.cfg.connectivity.discord_rpc.enabled"
+            v-bind="ciderRpcBubble"
+          ></arpc-bubble
         ></Transition>
 
         <Transition name="arpc-settings-slide">
-          <div v-show="frontend.bubblesExpanded">
-            <Transition name="arpc-settings-slide">
-              <arpc-bubble
-                v-if="$root.cfg.general.privateEnabled && settings.respectPrivateSession"
-                v-bind="privateSessionBubble"
-              ></arpc-bubble
-            ></Transition>
-
-            <Transition name="arpc-settings-slide">
-              <arpc-bubble
-                v-if="app.cfg.connectivity.discord_rpc.enabled"
-                v-bind="ciderRpcBubble"
-              ></arpc-bubble
-            ></Transition>
-
-            <arpc-bubble
-              v-for="bubble in bubbles"
-              v-if="bubble?.enabled"
-              v-bind="bubble"
-              @do-action="doAction"
-            ></arpc-bubble></div
+          <arpc-bubble
+            v-if="!remoteData"
+            v-bind="noConnectionBubble"
+          ></arpc-bubble
         ></Transition>
+
+        <arpc-bubble
+          v-for="bubble in remoteData?.bubbles"
+          v-if="bubble?.enabled"
+          v-bind="bubble"
+          @do-action="doAction"
+        ></arpc-bubble>
 
         <!-- General -->
         <arpc-general
           v-show="frontend.sidebar === 'general'"
-          :data="[settings.play, settings.pause, settings.enabled]"
+          :data="[settings.play, settings.pause, settings.enabled, frontend.pageStates.general, remoteData?.flags]"
           @update="receiveSettings"
           @click-ee="clickingEe"
-          @set-modal="setModal"
-          @sidebar-item="changeSidebarItem"
+          @do-action="doAction"
         />
 
         <!-- Podcasts -->
         <arpc-podcasts
           v-show="frontend.sidebar === 'podcasts'"
-          :data="[settings.podcasts, settings.enabled]"
+          :data="[settings.podcasts, settings.enabled, frontend.pageStates.podcasts, remoteData?.flags]"
           @update="receiveSettings"
           @click-ee="clickingEe"
-          @set-modal="setModal"
-          @sidebar-item="changeSidebarItem"
+          @do-action="doAction"
         />
 
         <!-- Videos -->
         <arpc-videos
           v-show="frontend.sidebar === 'videos'"
-          :data="[settings.videos, settings.enabled]"
+          :data="[settings.videos, settings.enabled, frontend.pageStates.videos, remoteData?.flags]"
           @update="receiveSettings"
           @click-ee="clickingEe"
-          @set-modal="setModal"
-          @sidebar-item="changeSidebarItem"
+          @do-action="doAction"
         />
 
         <!-- Radio -->
         <arpc-radio
           v-show="frontend.sidebar === 'radio'"
-          :data="[settings.radio, settings.enabled]"
+          :data="[settings.radio, settings.enabled, remoteData?.flags]"
           @update="receiveSettings"
           @click-ee="clickingEe"
-          @set-modal="setModal"
-          @sidebar-item="changeSidebarItem"
+          @do-action="doAction"
         />
 
         <!-- Settings -->
         <div v-show="frontend.sidebar === 'settings'">
-          <h2 @click="clickingEe('settingsClickEe')">Settings</h2>
+          <div class="arpc-settings-header">
+            <h2 @click="clickingEe('settingsClickEe')">Settings</h2>
+            <arpc-exit-button
+              v-if="remoteData?.flags?.exitButton"
+            ></arpc-exit-button>
+          </div>
 
           <div class="arpc-option-container">
             <div :disabled="app.cfg.connectivity.discord_rpc.enabled">
@@ -207,6 +215,56 @@ export default Vue.component("plugin.advancedrpc", {
                   <input
                     type="checkbox"
                     v-model="settings.respectPrivateSession"
+                    switch
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div
+              v-if="remoteData?.icloudArtworks?.setting"
+              :disabled="remoteData?.icloudArtworks?.settingDisabled"
+              class="arpc-option"
+            >
+              <div class="arpc-option-segment">
+                <div class="arpc-option-with-badge">
+                  <div v-if="remoteData?.icloudArtworks?.settingTitle">
+                    {{ remoteData?.icloudArtworks?.settingTitle }}
+                  </div>
+                  <div v-else>iCloud Music Artworks</div>
+                  <div
+                    v-if="remoteData?.badges?.icloud?.text"
+                    :style="{background: remoteData?.badges?.icloud?.color, color: remoteData?.badges?.icloud?.textColor}"
+                    class="arpc-badge"
+                  >
+                    {{ remoteData?.badges?.icloud?.text }}
+                  </div>
+                </div>
+                <small v-if="remoteData?.icloudArtworks?.settingDesc">
+                  {{ remoteData?.icloudArtworks?.settingDesc }}
+                </small>
+                <small v-else
+                  >Show the artworks of the songs uploaded to your iCloud Music
+                  Library.</small
+                >
+              </div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <label>
+                  <input
+                    v-if="remoteData?.icloudArtworks?.settingDisabled && remoteData?.icloudArtworks?.forceOn"
+                    type="checkbox"
+                    checked
+                    switch
+                  />
+                  <input
+                    v-else-if="remoteData?.icloudArtworks?.settingDisabled"
+                    type="checkbox"
+                    switch
+                  />
+                  <input
+                    v-else
+                    type="checkbox"
+                    v-model="settings.icloudArtworks"
                     switch
                   />
                 </label>
@@ -298,27 +356,6 @@ export default Vue.component("plugin.advancedrpc", {
               </div>
             </div>
 
-            <div class="arpc-option">
-              <div class="arpc-option-segment">
-                Apply Settings Immediately
-                <small
-                  >Apply settings to your Discord presence as you change them.
-                  This can cause rate limits.</small
-                >
-              </div>
-              <div class="arpc-option-segment arpc-option-segment_auto">
-                <label>
-                  <input
-                    type="checkbox"
-                    v-model="settings.applySettings"
-                    true-value="immediately"
-                    false-value="manually"
-                    switch
-                  />
-                </label>
-              </div>
-            </div>
-
             <div v-if="themes && themes.length > 0" class="arpc-option">
               <div
                 class="arpc-option-segment"
@@ -328,11 +365,11 @@ export default Vue.component("plugin.advancedrpc", {
                 <div class="arpc-option-with-badge">
                   Theme
                   <div
-                    v-if="remoteData?.themesBadge?.text"
-                    :style="{background: remoteData?.themesBadge?.color, color: remoteData?.themesBadge?.textColor}"
+                    v-if="remoteData?.badges?.themes?.text"
+                    :style="{background: remoteData?.badges?.themes?.color, color: remoteData?.badges?.themes?.textColor}"
                     class="arpc-badge"
                   >
-                    {{ remoteData?.themesBadge?.text }}
+                    {{ remoteData?.badges?.themes?.text }}
                   </div>
                 </div>
                 <small
@@ -345,7 +382,7 @@ export default Vue.component("plugin.advancedrpc", {
               <div class="arpc-option-segment arpc-option-segment_auto">
                 <label>
                   <select
-                    v-if="remoteData?.categorizedThemes"
+                    v-if="remoteData?.flags?.categorizedThemes"
                     class="arpc-select"
                     v-model="frontend.theme"
                   >
@@ -366,6 +403,28 @@ export default Vue.component("plugin.advancedrpc", {
                     <option v-for="theme in themes" :value="theme.id">
                       {{ theme.name }}
                     </option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div v-if="remoteData?.flags?.scaleSetting" class="arpc-option">
+              <div class="arpc-option-segment">Scale</div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <label>
+                  <select class="arpc-select" v-model="frontend.scale">
+                    <option value="" disabled hidden>Scale</option>
+                    <option value="75">75%</option>
+                    <option value="80">80%</option>
+                    <option value="85">85%</option>
+                    <option value="90">90%</option>
+                    <option value="95">95%</option>
+                    <option value="100">100%</option>
+                    <option value="105">105%</option>
+                    <option value="110">110%</option>
+                    <option value="115">115%</option>
+                    <option value="120">120%</option>
+                    <option value="125">125%</option>
                   </select>
                 </label>
               </div>
@@ -562,9 +621,9 @@ export default Vue.component("plugin.advancedrpc", {
         },
       },
       imageSize: "1024",
-      applySettings: "manually",
       removeInvalidButtons: true,
       removePause: "0",
+      icloudArtworks: true,
     },
     installedVersion: AdvancedRpc.installedVersion,
     unappliedSettings: AdvancedRpc.unappliedSettings,
@@ -588,25 +647,79 @@ export default Vue.component("plugin.advancedrpc", {
       color: "#FAA81A",
       icon: "warning",
     },
+    noConnectionBubble: {
+      enabled: true,
+      title: "Huston, we have a problem.",
+      message:
+        "Unable to establish a connection to the AdvancedRPC server. Some features may be unavailable. Please check your internet connection, or try again later.",
+      color: "#F04747",
+      icon: "",
+    },
     frontend: {
       sidebar: "general",
       theme: "dark",
       bubblesExpanded: true,
+      scale: "100",
+      pageStates: {
+        general: "play",
+        videos: "play",
+        podcasts: "play",
+      },
     },
     themes: [],
     filteredCategorizedThemes: {},
-    bubbles: [],
+    settingsStyle: {
+      zoom: "100%",
+    },
   }),
   computed: {
     remoteData() {
       const data = Vue.observable(window.AdvancedRpc).remoteData;
-      this.initBubbles(data?.bubbles);
       if (data?.themes) this.themes = Object.values(data.themes).flat();
       this.setTheme(this.frontend.theme, data);
       return data;
     },
     versionData() {
       return Vue.observable(window.AdvancedRpc).versionData;
+    },
+    sidebarScaleStyle() {
+      const scaleToHeightMap =
+        app?.cfg?.visual?.directives?.windowLayout === "twopanel"
+          ? {
+              75: "97.5",
+              80: "98",
+              85: "98.5",
+              90: "99",
+              95: "99.5",
+              105: "100.5",
+              110: "101.5",
+              115: "102",
+              120: "102.5",
+              125: "103",
+            }
+          : null;
+
+      const scaleToPaddingMap = {
+        75: "27.5",
+        80: "25",
+        85: "22.5",
+        90: "20",
+        95: "17.5",
+        105: "12.5",
+        110: "10",
+        115: "7.5",
+        120: "5",
+        125: "2.5",
+      };
+
+      const scale = this.frontend.scale;
+      const heightValue = scaleToHeightMap?.[scale] || "100";
+      const paddingValue = scaleToPaddingMap[scale] || "15";
+
+      return `
+      height: calc(${heightValue}% - var(--chromeHeight2));
+      padding-top: calc(var(--chromeHeight1) + ${paddingValue}px);
+      `;
     },
   },
   watch: {
@@ -620,7 +733,6 @@ export default Vue.component("plugin.advancedrpc", {
           `plugin.${AdvancedRpc.PLUGIN_NAME}.setting`,
           this.settings
         );
-        this.initBubbles(this.remoteData?.bubbles);
       },
       deep: true,
     },
@@ -628,6 +740,7 @@ export default Vue.component("plugin.advancedrpc", {
       handler() {
         AdvancedRpc.setFrontendData(this.frontend);
         this.setTheme(this.frontend.theme, this.remoteData);
+        this.settingsStyle.zoom = `${this.frontend.scale}%`;
       },
       deep: true,
     },
@@ -636,12 +749,16 @@ export default Vue.component("plugin.advancedrpc", {
     this.settings = AdvancedRpc.getSettings();
 
     let frontend = AdvancedRpc.getFrontendData();
-    if (typeof frontend["bubblesExpanded"] === "undefined")
-      frontend["bubblesExpanded"] = true;
+    if (!frontend["scale"]) frontend["scale"] = "100";
+    if (!frontend.pageStates["general"])
+      frontend.pageStates["general"] = "play";
+    if (!frontend.pageStates["videos"]) frontend.pageStates["videos"] = "play";
+    if (!frontend.pageStates["podcasts"])
+      frontend.pageStates["podcasts"] = "play";
+
     this.frontend = frontend;
 
     this.setTheme(frontend.theme, this.remoteData);
-    this.initBubbles(this.remoteData?.bubbles);
   },
   async mounted() {
     ipcRenderer.on(
@@ -661,7 +778,7 @@ export default Vue.component("plugin.advancedrpc", {
 
     document.onkeydown = this.checkKey;
 
-    if (!this.remoteData?.dontTriggerApiOnMount)
+    if (!this.remoteData?.flags?.dontTriggerApiOnMount)
       await AdvancedRpc.checkForUpdates("arpc");
   },
   methods: {
@@ -708,24 +825,68 @@ export default Vue.component("plugin.advancedrpc", {
       this.frontend.bubblesExpanded = !this.frontend.bubblesExpanded;
     },
     changeSidebarItem(item) {
-      this.frontend.sidebar = item;
-      document.querySelector(".arpc-page").scrollIntoView();
+      item = item.split(".");
+
+      this.frontend.sidebar = item[0];
+      if (item[1]) this.frontend.pageStates[item[0]] = item[1];
+      else document.querySelector(".arpc-page").scrollIntoView();
     },
-    async doAction(item) {
-      if (item.dest) item = item.dest;
-      if (item.startsWith("arpc.")) {
-        this.changeSidebarItem(item.replace("arpc.", ""));
-      } else if (item.startsWith("modal.")) {
-        this.setModal(item.replace("modal.", ""));
-      } else if (item.startsWith("theme.")) {
-        const prevTheme = this.frontend.theme;
-        this.setTheme(item.replace("theme.", ""), this.remoteData);
-        if (prevTheme !== item.replace("theme.", ""))
-          this.reportThemeUnlock(item.replace("theme.", ""));
-      } else if (item.startsWith("unlockTheme.")) {
-        this.unlockTheme(item.replace("unlockTheme.", ""));
-      } else {
-        this.openLink(item);
+    doAction(data) {
+      if (data.dest) data = data.dest;
+
+      let dest;
+      if (typeof data === "string") {
+        dest = !data.startsWith("http") ? data.split(".")[0] : data;
+      }
+
+      if (!dest) return;
+
+      let action;
+      if (!data.startsWith("http")) action = data.split(".").slice(1).join(".");
+
+      switch (dest) {
+        case "arpc":
+          this.changeSidebarItem(action);
+          break;
+        case "modal":
+          if (action === "close") this.modal = null;
+          else this.setModal(action);
+          break;
+        case "theme":
+          const prevTheme = this.frontend.theme;
+          this.setTheme(action, this.remoteData);
+          if (prevTheme !== action) this.reportThemeUnlock(action);
+          break;
+        case "unlockTheme":
+          this.unlockTheme(action);
+          break;
+        case "play":
+          app.mk
+            .setQueue({ url: action, parameters: { l: app.mklang } })
+            .then(() => {
+              app.mk.play();
+            });
+          break;
+        case "ciderModal":
+          app.modals[action] = true;
+          break;
+        case "ciderHash":
+          window.location.hash = action;
+          break;
+        case "closeCider":
+          app.closeWindow();
+          break;
+        case "restartCider":
+          ipcRenderer.invoke("relaunchApp");
+          break;
+        case "back":
+          app.navigateBack();
+          break;
+        case "update":
+          AdvancedRpc.update();
+          break;
+        default:
+          this.openLink(dest);
       }
     },
     openLink(url) {
@@ -832,7 +993,7 @@ export default Vue.component("plugin.advancedrpc", {
     async reportThemeUnlock(theme) {
       try {
         await fetch(
-          `https://dev-api.imvasi.com/theme?version=${this.installedVersion}&theme=${theme}
+          `https://arpc-api.imvasi.com/theme?version=${this.installedVersion}&theme=${theme}
         `,
           {
             method: "POST",
@@ -843,24 +1004,13 @@ export default Vue.component("plugin.advancedrpc", {
         );
       } catch {}
     },
-    initBubbles(data) {
-      let bubbles = [];
-      data?.forEach((bubble) => {
-        if (bubble.enabled) bubbles.push(bubble);
-      });
-
-      if (app.cfg.general.privateEnabled && this.settings.respectPrivateSession)
-        bubbles.push(undefined);
-
-      if (app.cfg.connectivity.discord_rpc.enabled) bubbles.push(undefined);
-
-      this.bubbles = bubbles;
-    },
     checkKey(e) {
       e = e || window.event;
 
       // esc
-      if (e.keyCode == "27") {
+      if (e.keyCode == "27" && this.remoteData?.flags?.escExit) {
+        this.modal ? (this.modal = null) : app.navigateBack();
+      } else if (e.keyCode == "27") {
         this.modal = null;
       }
 

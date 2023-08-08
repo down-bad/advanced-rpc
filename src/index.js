@@ -3,6 +3,7 @@ const { ipcMain } = require("electron");
 const { join } = require("path");
 const fs = require("fs");
 const path = require("path");
+
 module.exports = class AdvancedRpcBackend {
   constructor(env) {
     this._env = env;
@@ -44,11 +45,11 @@ module.exports = class AdvancedRpcBackend {
   async onRendererReady(_win) {
     this._env.utils.loadJSFrontend(join(this._env.dir, "index.frontend.js"));
 
-    try {
-      this._utils
-        .getWindow()
-        .webContents.send(`plugin.${this.name}.itemChanged`, null);
-    } catch {}
+    // try {
+    //   this._utils
+    //     .getWindow()
+    //     .webContents.send(`plugin.${this.name}.itemChanged`, null);
+    // } catch {}
 
     this.startedTime = Date.now();
     this.pauseTime = Date.now();
@@ -81,6 +82,10 @@ module.exports = class AdvancedRpcBackend {
       ipcMain.handle(`plugin.${this.name}.colorsless`, (_event, data) => {
         fs.writeFile(filePath, data, (err) => {
           if (err) console.log(err);
+          else
+            this._utils
+              .getWindow()
+              .webContents.send(`plugin.${this.name}.setcss`, true);
         });
       });
     } catch {}
@@ -94,45 +99,66 @@ module.exports = class AdvancedRpcBackend {
 
     // Get current song data from localStorage
     try {
-      ipcMain.handle(`plugin.${this.name}.currentItem`, (_event, item) => {
-        if (item) this.currentItem = JSON.parse(item);
-        else this.currentItem = {};
-      });
+      ipcMain.handle(
+        `plugin.${this.name}.currentItem`,
+        (_event, item, update) => {
+          if (item) {
+            this.currentItem = JSON.parse(item);
+            if (update) this.setActivity(this._attributes);
+          } else this.currentItem = {};
+        }
+      );
     } catch {}
 
     // Handle arpc settings changes
     ipcMain.handle(`plugin.${this.name}.setting`, (_event, settings) => {
       if (!settings || !this._initSettings) return;
 
-      this._settings.applySettings = settings.applySettings;
-
-      console.log(this._prevSettings);
-
-      if (settings.applySettings === "manually") {
-        if (JSON.stringify(this._prevSettings) === JSON.stringify(settings))
-          this._utils
-            .getWindow()
-            .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-        else {
-          this._utils
-            .getWindow()
-            .webContents.send(`plugin.${this.name}.unappliedSettings`, true);
-        }
-      } else {
-        this._prevSettings = settings;
-        this._settings = settings;
-        this.setActivity(this._attributes);
+      if (JSON.stringify(this._prevSettings) === JSON.stringify(settings))
+        this._utils
+          .getWindow()
+          .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+      else {
+        this._utils
+          .getWindow()
+          .webContents.send(`plugin.${this.name}.unappliedSettings`, true);
       }
     });
 
     ipcMain.handle(`plugin.${this.name}.updateSettings`, (_event, settings) => {
       if (!settings) return;
 
+      const update = this._settings.icloudArtworks !== settings.icloudArtworks;
+
       this._prevSettings = settings;
       this._settings = settings;
       this._utils
         .getWindow()
         .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
+
+      const cover =
+        this._settings.play.largeImage === "cover" ||
+        this._settings.pause.largeImage === "cover" ||
+        this._settings.play.smallImage === "cover" ||
+        this._settings.pause.smallImage === "cover";
+
+      const enabled =
+        this._settings.enabled &&
+        (this._settings.play.enabled || this._settings.pause.enabled);
+
+      this._utils
+        .getWindow()
+        .webContents.send(
+          `plugin.${this.name}.itemChanged`,
+          enabled,
+          cover,
+          this._settings.icloudArtworks,
+          this._attributes?.kind === "song",
+          this._attributes?.songId,
+          this._attributes?.artwork?.url,
+          update
+        );
+
       this.setActivity(this._attributes);
     });
 
@@ -196,9 +222,27 @@ module.exports = class AdvancedRpcBackend {
     // Song change
     if (attributes.songId !== prevAttributes?.songId) {
       try {
+        const cover =
+          this._settings.play.largeImage === "cover" ||
+          this._settings.pause.largeImage === "cover" ||
+          this._settings.play.smallImage === "cover" ||
+          this._settings.pause.smallImage === "cover";
+
+        const enabled =
+          this._settings.enabled &&
+          (this._settings.play.enabled || this._settings.pause.enabled);
+
         this._utils
           .getWindow()
-          .webContents.send(`plugin.${this.name}.itemChanged`, null);
+          .webContents.send(
+            `plugin.${this.name}.itemChanged`,
+            enabled,
+            cover,
+            this._settings.icloudArtworks,
+            attributes.kind === "song",
+            attributes.songId,
+            attributes.artwork?.url
+          );
       } catch {}
 
       this.startedTime = Date.now();
@@ -208,8 +252,10 @@ module.exports = class AdvancedRpcBackend {
 
     if (
       attributes.kind === "song" &&
-      !attributes.songId.startsWith("i.") &&
-      this.currentItem?._songId !== attributes.songId
+      ((!attributes.songId.startsWith("i.") &&
+        this.currentItem?._songId !== attributes.songId) ||
+        (attributes.songId.startsWith("i.") &&
+          this.currentItem?.id !== attributes.songId))
     )
       return;
 
@@ -256,13 +302,7 @@ module.exports = class AdvancedRpcBackend {
     this._prevAttributes = attributes;
   }
 
-  setActivity(attributes) {
-    if (this._settings.applySettings === "immediately") {
-      this._utils
-        .getWindow()
-        .webContents.send(`plugin.${this.name}.unappliedSettings`, false);
-    }
-
+  async setActivity(attributes) {
     if (!this._client || !attributes) return;
 
     if (
@@ -330,7 +370,7 @@ module.exports = class AdvancedRpcBackend {
 
     // Set large image
     if (settings.largeImage.startsWith("cover")) {
-      activity.largeImageKey = this.setImage(
+      activity.largeImageKey = await this.setImage(
         attributes,
         settings,
         fallbackImage,
@@ -340,8 +380,9 @@ module.exports = class AdvancedRpcBackend {
       if (
         activity.largeImageKey !== fallbackImage &&
         !this.isValidUrl(activity.largeImageKey)
-      )
+      ) {
         activity.largeImageKey = fallbackImage;
+      }
     } else if (settings.largeImage === "custom") {
       activity.largeImageKey = settings.largeImageKey;
     }
@@ -349,7 +390,7 @@ module.exports = class AdvancedRpcBackend {
     // Set small image
     activity.smallImageText = settings.smallImageText;
     if (settings.smallImage.startsWith("cover")) {
-      activity.smallImageKey = this.setImage(
+      activity.smallImageKey = await this.setImage(
         attributes,
         settings,
         fallbackImage,
@@ -747,23 +788,38 @@ module.exports = class AdvancedRpcBackend {
     return url.protocol === "http:" || url.protocol === "https:";
   }
 
-  setImage(attributes, settings, fallbackImage, imageSize) {
+  async setImage(attributes, settings, fallbackImage, imageSize) {
+    let imageUrl;
+
     if (
-      attributes.kind === "song" &&
       settings.largeImage === "cover" &&
-      this.remoteData?.animatedArtworks &&
+      this.currentItem?.artwork &&
+      (this.currentItem?._songId === attributes.songId ||
+        this.currentItem?.id === attributes.songId)
+    ) {
+      imageUrl = this.currentItem.artwork
+        .replace("{w}", imageSize ?? 1024)
+        .replace("{h}", imageSize ?? 1024);
+    } else if (attributes.artwork.url && attributes.artwork.url.length <= 256) {
+      imageUrl = attributes.artwork.url
+        .replace("{w}", imageSize ?? 1024)
+        .replace("{h}", imageSize ?? 1024);
+    } else {
+      imageUrl = fallbackImage;
+    }
+
+    // Animated artworks v1
+    if (
+      this.remoteData?.flags?.animatedArtworks &&
+      !this.remoteData?.animatedArtworksv2?.enabled &&
       this.artworks &&
       this.currentItem?._songId === attributes.songId &&
       this.artworks[this.currentItem?._assets?.[0]?.metadata?.playlistId]
     ) {
-      return this.artworks[this.currentItem._assets[0].metadata.playlistId];
-    } else {
-      return (
-        attributes.artwork?.url
-          ?.replace("{w}", imageSize ?? 1024)
-          .replace("{h}", imageSize ?? 1024) ?? fallbackImage
-      );
+      imageUrl = this.artworks[this.currentItem._assets[0].metadata.playlistId];
     }
+
+    return imageUrl;
   }
 
   setButtons(button1, button2, activity) {
