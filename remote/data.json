@@ -1,4 +1,13 @@
 {
+  "bubbles": [
+    {
+      "enabled": true,
+      "message": "Animated artworks are no longer available on this version of AdvancedRPC. Please update to the latest version to continue using them.",
+      "color": "#f0423c",
+      "icon": "info",
+      "versions": ["1.5.0", "1.5.1", "1.5.2", "1.5.3", "1.5.4", "1.6.0"]
+    }
+  ],
   "sideBarItems": {
     "upper": [
       {
@@ -66,5 +75,5 @@
       "requirement": "redblueTheme"
     }
   ],
-  "animatedArtworks": true
+  "animatedArtworks": false
 }
