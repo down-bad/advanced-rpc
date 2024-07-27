@@ -94,6 +94,9 @@ export default Vue.component("arpc-changelog", {
     updating() {
       return Vue.observable(window.AdvancedRpc).updateInProgress;
     },
+    updateDownloaded() {
+      return Vue.observable(window.AdvancedRpc).updateDownloaded;
+    },
   },
   async mounted() {
     await AdvancedRpc.checkForUpdates("changelog");
@@ -106,6 +109,11 @@ export default Vue.component("arpc-changelog", {
         !this.versionData.updateAvailable ||
         this.gettingRemoteData
       ) {
+        return;
+      }
+
+      if (this.updateDownloaded) {
+        ipcRenderer.invoke("relaunchApp");
         return;
       }
 

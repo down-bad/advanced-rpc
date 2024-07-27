@@ -1,6 +1,6 @@
 export default Vue.component("plugin.advancedrpc", {
   template: `
-  <div class="advancedrpc">
+<div class="advancedrpc">
   <Transition name="arpc-modal">
     <arpc-changelog
       v-if="modal === 'changelog'"
@@ -184,6 +184,9 @@ export default Vue.component("plugin.advancedrpc", {
                 </div>
               </div>
             </div>
+
+            <div class="arpc-label">PRESENCE</div>
+
             <div class="arpc-option">
               <div class="arpc-option-segment">
                 Application ID
@@ -352,6 +355,23 @@ export default Vue.component("plugin.advancedrpc", {
                     v-model="settings.removeInvalidButtons"
                     switch
                   />
+                </label>
+              </div>
+            </div>
+
+            <div class="arpc-label">ADVANCEDRPC</div>
+
+            <div class="arpc-option" v-if="remoteData?.flags?.autoUpdateOption">
+              <div class="arpc-option-segment">
+                Auto Update
+                <small
+                  >Automatically update AdvancedRPC when a new version is
+                  available.</small
+                >
+              </div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <label>
+                  <input type="checkbox" v-model="frontend.autoUpdate" switch />
                 </label>
               </div>
             </div>
@@ -660,6 +680,7 @@ export default Vue.component("plugin.advancedrpc", {
       theme: "dark",
       bubblesExpanded: true,
       scale: "100",
+      autoUpdate: true,
       pageStates: {
         general: "play",
         videos: "play",
@@ -755,6 +776,8 @@ export default Vue.component("plugin.advancedrpc", {
     if (!frontend.pageStates["videos"]) frontend.pageStates["videos"] = "play";
     if (!frontend.pageStates["podcasts"])
       frontend.pageStates["podcasts"] = "play";
+
+    if (typeof frontend.autoUpdate === "undefined") frontend.autoUpdate = true;
 
     this.frontend = frontend;
 

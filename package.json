@@ -1,6 +1,6 @@
 {
   "name": "advancedrpc",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Fully customizable Discord Rich Presence for Cider",
   "main": "index.js",
   "scripts": {
@@ -27,7 +27,7 @@
     "rollup-plugin-watch": "^1.0.2"
   },
   "dependencies": {
-    "discord-auto-rpc": "^1.0.17",
+    "@xhayper/discord-rpc": "^1.1.4",
     "dotenv": "^16.0.3"
   },
   "repository": {

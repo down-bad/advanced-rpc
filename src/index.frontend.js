@@ -53,6 +53,7 @@ class AdvancedRpcFrontend {
   changelog = undefined;
   unappliedSettings = false;
   updateInProgress = false;
+  updateDownloaded = null;
   artworksUpdate = null;
   colorslessUpdate = null;
   isDev = false;
@@ -145,11 +146,15 @@ class AdvancedRpcFrontend {
     if (typeof settings.icloudArtworks === "undefined")
       settings["icloudArtworks"] = true;
 
+    if (!settings.play.type) settings["play"]["type"] = "listening";
+    if (!settings.pause.type) settings["pause"]["type"] = "listening";
+
     if (!settings.podcasts)
       settings["podcasts"] = {
         play: {
           enabled: true,
           usePlayConfig: false,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           timestamp: "remaining",
@@ -172,6 +177,7 @@ class AdvancedRpcFrontend {
         pause: {
           enabled: true,
           usePauseConfig: false,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           largeImage: "cover",
@@ -193,11 +199,17 @@ class AdvancedRpcFrontend {
         },
       };
 
+    if (!settings.podcasts.play.type)
+      settings["podcasts"]["play"]["type"] = "listening";
+    if (!settings.podcasts.pause.type)
+      settings["podcasts"]["pause"]["type"] = "listening";
+
     if (!settings.videos)
       settings["videos"] = {
         play: {
           enabled: true,
           usePlayConfig: false,
+          type: "watching",
           details: "{title}",
           state: "{artist}",
           timestamp: "remaining",
@@ -220,6 +232,7 @@ class AdvancedRpcFrontend {
         pause: {
           enabled: true,
           usePauseConfig: false,
+          type: "watching",
           details: "{title}",
           state: "{artist}",
           largeImage: "cover",
@@ -241,10 +254,16 @@ class AdvancedRpcFrontend {
         },
       };
 
+    if (!settings.videos.play.type)
+      settings["videos"]["play"]["type"] = "watching";
+    if (!settings.videos.pause.type)
+      settings["videos"]["pause"]["type"] = "watching";
+
     if (!settings.radio)
       settings["radio"] = {
         enabled: true,
         usePlayConfig: false,
+        type: "listening",
         details: "{title}",
         state: "{artist}",
         timestamp: "elapsed",
@@ -266,6 +285,8 @@ class AdvancedRpcFrontend {
         },
       };
 
+    if (!settings.radio.type) settings["radio"]["type"] = "listening";
+
     this.setSettings(settings);
   }
 
@@ -279,6 +300,7 @@ class AdvancedRpcFrontend {
         respectPrivateSession: true,
         play: {
           enabled: true,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           timestamp: "remaining",
@@ -301,6 +323,7 @@ class AdvancedRpcFrontend {
         },
         pause: {
           enabled: true,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           largeImage: "cover",
@@ -324,6 +347,7 @@ class AdvancedRpcFrontend {
         radio: {
           enabled: true,
           usePlayConfig: false,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           timestamp: "elapsed",
@@ -348,6 +372,7 @@ class AdvancedRpcFrontend {
           play: {
             enabled: true,
             usePlayConfig: false,
+            type: "listening",
             details: "{title}",
             state: "{artist}",
             timestamp: "remaining",
@@ -370,6 +395,7 @@ class AdvancedRpcFrontend {
           pause: {
             enabled: true,
             usePauseConfig: false,
+            type: "listening",
             details: "{title}",
             state: "{artist}",
             largeImage: "cover",
@@ -394,6 +420,7 @@ class AdvancedRpcFrontend {
           play: {
             enabled: true,
             usePlayConfig: false,
+            type: "watching",
             details: "{title}",
             state: "{artist}",
             timestamp: "remaining",
@@ -416,6 +443,7 @@ class AdvancedRpcFrontend {
           pause: {
             enabled: true,
             usePauseConfig: false,
+            type: "watching",
             details: "{title}",
             state: "{artist}",
             largeImage: "cover",
@@ -505,9 +533,19 @@ class AdvancedRpcFrontend {
           this.versionData = this.remoteData.versionData;
           this.artworksUpdate = this.remoteData.versionData.artworksUpdate;
 
+          const autoUpdateRemotely =
+            this.remoteData?.flags?.autoUpdate &&
+            !this.remoteData?.flags?.autoUpdateOption;
+          const autoUpdateLocally =
+            this.remoteData?.flags?.autoUpdate &&
+            this.remoteData?.flags?.autoUpdateOption &&
+            frontend.autoUpdate;
+
           if (
             this.versionData.updateAvailable &&
-            this.versionData.updateNotif
+            this.versionData.updateNotif &&
+            !autoUpdateRemotely &&
+            !autoUpdateLocally
           ) {
             const updateNotyf = notyf.error({
               message:
@@ -523,6 +561,11 @@ class AdvancedRpcFrontend {
               app.pluginPages.page = "plugin.advancedrpc";
               window.location.hash = "plugin-renderer";
             });
+          }
+
+          if (autoUpdateRemotely || autoUpdateLocally) {
+            this.update(autoUpdateRemotely || autoUpdateLocally);
+            // notyf.success(`${autoUpdateRemotely || autoUpdateLocally}`);
           }
         } else {
           this.versionData = null;
@@ -658,11 +701,40 @@ class AdvancedRpcFrontend {
     await Promise.allSettled(promises);
   }
 
-  async update() {
+  async update(autoUpdate) {
+    if (!this.remoteData?.versionData?.updateAvailable) {
+      return;
+    }
+
+    if (this.remoteData?.versionData?.version === this.updateDownloaded) {
+      return;
+    }
+
     AdvancedRpc.updateInProgress = true;
+
     ipcRenderer.once("plugin-installed", (event, arg) => {
       if (arg.success) {
-        ipcRenderer.invoke("relaunchApp");
+        // ipcRenderer.invoke("relaunchApp");
+        AdvancedRpc.updateInProgress = false;
+        AdvancedRpc.updateDownloaded = this.versionData?.version;
+
+        if (autoUpdate && this.remoteData?.flags?.autoUpdateNotif) {
+          const updateNotyf = notyf.error({
+            message:
+              this.remoteData?.flags?.autoUpdateNotifText ||
+              "New AdvancedRPC version available! Restart Cider to complete installation.",
+            icon: false,
+            background: "#5865f2",
+            duration: "10000",
+            dismissible: true,
+          });
+          updateNotyf.on("click", ({ target, event }) => {
+            app.pluginPages.page = "plugin.advancedrpc";
+            window.location.hash = "plugin-renderer";
+          });
+        } else if (!autoUpdate) {
+          ipcRenderer.invoke("relaunchApp");
+        }
       } else {
         notyf.error("Error updating AdvancedRPC");
         AdvancedRpc.updateInProgress = false;

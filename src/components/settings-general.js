@@ -1,7 +1,7 @@
 export default Vue.component("arpc-general", {
   props: ["data"],
   template: `
-  <div>
+<div>
   <div class="arpc-settings-header">
     <h2 @click="$emit('click-ee', 'generalClickEe')">Songs</h2>
     <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
@@ -40,17 +40,31 @@ export default Vue.component("arpc-general", {
 
     <div :disabled="!settings.play.enabled">
       <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+
+      <div class="arpc-option" v-if="flags?.activityTypes">
+        <div class="arpc-option-segment">
+          Activity Type
+          <small
+            v-if="flags?.discordTypeBugNotifText && settings.play.type !== 'playing'"
+            >{{ flags.discordTypeBugNotifText }}</small
+          >
+        </div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <select class="arpc-select" v-model="settings.play.type">
+              <option value="listening">Listening</option>
+              <option value="watching">Watching</option>
+              <option value="playing">Playing</option>
+              <option value="competing">Competing</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       <div class="arpc-option">
         <div class="arpc-option-segment">
           First Line
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button>
-          </small>
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -62,18 +76,26 @@ export default Vue.component("arpc-general", {
       <div class="arpc-option">
         <div class="arpc-option-segment">
           Second Line
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <input type="text" v-model="settings.play.state" />
+          </label>
+        </div>
+      </div>
+
+      <div
+        class="arpc-option"
+        v-if="flags?.activityTypes && flags?.thirdLine && settings.play.type !== 'playing'"
+      >
+        <div class="arpc-option-segment">
+          Third Line
+          <small>Max 128 characters</small>
+        </div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <input type="text" v-model="settings.play.largeImageText" />
           </label>
         </div>
       </div>
@@ -126,14 +148,7 @@ export default Vue.component("arpc-general", {
         <div class="arpc-option-segment">
           <div v-if="flags?.categorizedOptions">Text</div>
           <div v-else>Large Image Text</div>
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -177,14 +192,7 @@ export default Vue.component("arpc-general", {
         <div class="arpc-option-segment">
           <div v-if="flags?.categorizedOptions">Text</div>
           <div v-else>Small Image Text</div>
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -209,12 +217,7 @@ export default Vue.component("arpc-general", {
             Buttons <br v-show="settings.play.buttons" />
             <small
               ><b>Max label length</b>: 30 characters<br />
-              <b>Max URL length</b>: 512 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
+              <b>Max URL length</b>: 512 characters</small
             >
           </div>
           <div
@@ -257,17 +260,30 @@ export default Vue.component("arpc-general", {
 
     <div :disabled="!settings.pause.enabled">
       <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+      <div class="arpc-option" v-if="flags?.activityTypes">
+        <div class="arpc-option-segment">
+          Activity Type
+          <small
+            v-if="flags?.discordTypeBugNotifText && settings.pause.type !== 'playing'"
+            >{{ flags.discordTypeBugNotifText }}</small
+          >
+        </div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <select class="arpc-select" v-model="settings.pause.type">
+              <option value="listening">Listening</option>
+              <option value="watching">Watching</option>
+              <option value="playing">Playing</option>
+              <option value="competing">Competing</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       <div class="arpc-option">
         <div class="arpc-option-segment">
           First Line
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -279,18 +295,26 @@ export default Vue.component("arpc-general", {
       <div class="arpc-option">
         <div class="arpc-option-segment">
           Second Line
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <input type="text" v-model="settings.pause.state" />
+          </label>
+        </div>
+      </div>
+
+      <div
+        class="arpc-option"
+        v-if="flags?.activityTypes && flags?.thirdLine && settings.pause.type !== 'playing'"
+      >
+        <div class="arpc-option-segment">
+          Third Line
+          <small>Max 128 characters</small>
+        </div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <input type="text" v-model="settings.pause.largeImageText" />
           </label>
         </div>
       </div>
@@ -330,14 +354,7 @@ export default Vue.component("arpc-general", {
         <div class="arpc-option-segment">
           <div v-if="flags?.categorizedOptions">Text</div>
           <div v-else>Large Image Text</div>
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -381,14 +398,7 @@ export default Vue.component("arpc-general", {
         <div class="arpc-option-segment">
           <div v-if="flags?.categorizedOptions">Text</div>
           <div v-else>Small Image Text</div>
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -433,12 +443,7 @@ export default Vue.component("arpc-general", {
               Buttons <br />
               <small
                 ><b>Max label length:</b> 30 characters<br />
-                <b>Max URL length:</b> 512 characters<br /><button
-                  class="arpc-button arpc-var-button"
-                  @click="$emit('do-action', 'modal.variables')"
-                >
-                  {variables}
-                </button></small
+                <b>Max URL length:</b> 512 characters</small
               >
             </div>
             <div

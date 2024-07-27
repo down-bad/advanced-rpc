@@ -1,4 +1,4 @@
-const { AutoClient } = require("discord-auto-rpc");
+const { Client } = require("@xhayper/discord-rpc");
 const { ipcMain } = require("electron");
 const { join } = require("path");
 const fs = require("fs");
@@ -36,6 +36,7 @@ module.exports = class AdvancedRpcBackend {
 
     this.interval = null;
     this.cleared = false;
+    this.closeInterval = null;
   }
 
   onReady(_win) {
@@ -182,26 +183,66 @@ module.exports = class AdvancedRpcBackend {
   }
 
   connect() {
-    this._client = new AutoClient({ transport: "ipc" });
+    this._client = new Client({ clientId: this._settings.appId });
 
     this._client.once("ready", () => {
-      console.info(
-        `[Plugin][${this.name}] Connected to Discord as ${this._client.user.id}.`
-      );
-
       this.interval = setInterval(() => {
         this.handleActivity(this._attributes, this._prevAttributes);
       }, 500);
     });
 
-    this._client
-      .endlessLogin({
-        clientId: this._settings.appId,
-      })
-      .then(() => {
-        this.ready = true;
-      })
-      .catch((e) => console.error(`[Plugin][${this.name}] ${e}`));
+    this._client.on("disconnected", this.reconnect.bind(this));
+
+    this.endlessLogin();
+  }
+
+  endlessLogin() {
+    return new Promise((res) => {
+      const fn = () => {
+        this._client
+          .login()
+          .then(() => {
+            clearInterval(conInterval);
+            res();
+          })
+          .catch(() => {});
+      };
+
+      const conInterval = setInterval(fn, 15e3);
+      conInterval.unref();
+      fn();
+
+      this._client.once("connected", () => {
+        res();
+        this.setReady(true);
+      });
+    });
+  }
+
+  reconnect() {
+    if (!this.closeInterval) {
+      this.setReady(false);
+      this.closeInterval = setInterval(() => {
+        this._client
+          .login()
+          .then(() => {
+            this.closeInterval && clearInterval(this.closeInterval);
+            this.closeInterval = undefined;
+            this.setReady(true);
+          })
+          .catch(() => {});
+      }, 15e3);
+      this.closeInterval.unref();
+    }
+  }
+
+  setReady(ready) {
+    this.ready = ready;
+    ready
+      ? console.info(
+          `[Plugin][${this.name}] Connected to Discord as ${this._client.user.username} (${this._client.user.id}).`
+        )
+      : console.info(`[Plugin][${this.name}] Disconnected from Discord.`);
   }
 
   onPlaybackStateDidChange(attributes) {
@@ -288,7 +329,7 @@ module.exports = class AdvancedRpcBackend {
       !attributes.status &&
       this.pauseTime + removePause * 1000 < Date.now()
     ) {
-      this._client.clearActivity();
+      this._client.user.clearActivity();
       this.cleared = true;
       return;
     }
@@ -312,7 +353,7 @@ module.exports = class AdvancedRpcBackend {
         this._utils.getStoreValue("general.privateEnabled")) ||
       attributes.playParams?.id === "no-id-found"
     ) {
-      this._client.clearActivity();
+      this._client.user.clearActivity();
       this.cleared = true;
       return;
     }
@@ -358,6 +399,9 @@ module.exports = class AdvancedRpcBackend {
     }
 
     const fallbackImage = this._settings.play.fallbackImage;
+
+    if (this.remoteData?.flags?.activityTypes)
+      activity.type = this.getTypeId(settings.type);
 
     activity.details = settings.details;
     activity.state = settings.state;
@@ -507,10 +551,10 @@ module.exports = class AdvancedRpcBackend {
       (attributes.status && !settings.enabled) ||
       (!attributes.status && !settings.enabled)
     ) {
-      this._client.clearActivity();
+      this._client.user.clearActivity();
       this.cleared = true;
     } else if (activity && this._activityCache !== activity) {
-      this._client.setActivity(activity);
+      this._client.user.setActivity(activity);
       this.updateTime = Date.now();
     }
   }
@@ -834,6 +878,21 @@ module.exports = class AdvancedRpcBackend {
         label: button2.label,
         url: button2.url,
       });
+    }
+  }
+
+  getTypeId(type) {
+    switch (type) {
+      case "playing":
+        return 0;
+      case "listening":
+        return 2;
+      case "watching":
+        return 3;
+      case "competing":
+        return 5;
+      default:
+        return 0;
     }
   }
 
