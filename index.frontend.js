@@ -1,10 +1,10 @@
-/* Version: 1.7.0 - August 9, 2023 02:26:52 */
+/* Version: 1.7.1 - July 27, 2024 23:34:32 */
 (function () {
   'use strict';
 
   Vue.component("plugin.advancedrpc", {
     template: `
-  <div class="advancedrpc">
+<div class="advancedrpc">
   <Transition name="arpc-modal">
     <arpc-changelog
       v-if="modal === 'changelog'"
@@ -188,6 +188,9 @@
                 </div>
               </div>
             </div>
+
+            <div class="arpc-label">PRESENCE</div>
+
             <div class="arpc-option">
               <div class="arpc-option-segment">
                 Application ID
@@ -356,6 +359,23 @@
                     v-model="settings.removeInvalidButtons"
                     switch
                   />
+                </label>
+              </div>
+            </div>
+
+            <div class="arpc-label">ADVANCEDRPC</div>
+
+            <div class="arpc-option" v-if="remoteData?.flags?.autoUpdateOption">
+              <div class="arpc-option-segment">
+                Auto Update
+                <small
+                  >Automatically update AdvancedRPC when a new version is
+                  available.</small
+                >
+              </div>
+              <div class="arpc-option-segment arpc-option-segment_auto">
+                <label>
+                  <input type="checkbox" v-model="frontend.autoUpdate" switch />
                 </label>
               </div>
             </div>
@@ -631,7 +651,7 @@
       },
       installedVersion: AdvancedRpc.installedVersion,
       unappliedSettings: AdvancedRpc.unappliedSettings,
-      versionInfo: "ARPC 1.7.0 - August 9, 2023",
+      versionInfo: "ARPC 1.7.1 - July 27, 2024",
       textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
       urlVariables: "{appleMusicUrl}, {ciderUrl}",
       variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
@@ -660,6 +680,7 @@
         theme: "dark",
         bubblesExpanded: true,
         scale: "100",
+        autoUpdate: true,
         pageStates: {
           general: "play",
           videos: "play",
@@ -742,6 +763,7 @@
       if (!frontend.pageStates["general"]) frontend.pageStates["general"] = "play";
       if (!frontend.pageStates["videos"]) frontend.pageStates["videos"] = "play";
       if (!frontend.pageStates["podcasts"]) frontend.pageStates["podcasts"] = "play";
+      if (typeof frontend.autoUpdate === "undefined") frontend.autoUpdate = true;
       this.frontend = frontend;
       this.setTheme(frontend.theme, this.remoteData);
     },
@@ -1100,6 +1122,9 @@
       },
       updating() {
         return Vue.observable(window.AdvancedRpc).updateInProgress;
+      },
+      updateDownloaded() {
+        return Vue.observable(window.AdvancedRpc).updateDownloaded;
       }
     },
     async mounted() {
@@ -1108,6 +1133,10 @@
     methods: {
       update() {
         if (this.updating || !this.versionData || !this.versionData.updateAvailable || this.gettingRemoteData) {
+          return;
+        }
+        if (this.updateDownloaded) {
+          ipcRenderer.invoke("relaunchApp");
           return;
         }
         AdvancedRpc.update();
@@ -1418,7 +1447,7 @@
   Vue.component("arpc-general", {
     props: ["data"],
     template: `
-  <div>
+<div>
   <div class="arpc-settings-header">
     <h2 @click="$emit('click-ee', 'generalClickEe')">Songs</h2>
     <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
@@ -1457,17 +1486,31 @@
 
     <div :disabled="!settings.play.enabled">
       <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+
+      <div class="arpc-option" v-if="flags?.activityTypes">
+        <div class="arpc-option-segment">
+          Activity Type
+          <small
+            v-if="flags?.discordTypeBugNotifText && settings.play.type !== 'playing'"
+            >{{ flags.discordTypeBugNotifText }}</small
+          >
+        </div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <select class="arpc-select" v-model="settings.play.type">
+              <option value="listening">Listening</option>
+              <option value="watching">Watching</option>
+              <option value="playing">Playing</option>
+              <option value="competing">Competing</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       <div class="arpc-option">
         <div class="arpc-option-segment">
           First Line
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button>
-          </small>
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -1479,18 +1522,26 @@
       <div class="arpc-option">
         <div class="arpc-option-segment">
           Second Line
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <input type="text" v-model="settings.play.state" />
+          </label>
+        </div>
+      </div>
+
+      <div
+        class="arpc-option"
+        v-if="flags?.activityTypes && flags?.thirdLine && settings.play.type !== 'playing'"
+      >
+        <div class="arpc-option-segment">
+          Third Line
+          <small>Max 128 characters</small>
+        </div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <input type="text" v-model="settings.play.largeImageText" />
           </label>
         </div>
       </div>
@@ -1543,14 +1594,7 @@
         <div class="arpc-option-segment">
           <div v-if="flags?.categorizedOptions">Text</div>
           <div v-else>Large Image Text</div>
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -1594,14 +1638,7 @@
         <div class="arpc-option-segment">
           <div v-if="flags?.categorizedOptions">Text</div>
           <div v-else>Small Image Text</div>
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -1626,12 +1663,7 @@
             Buttons <br v-show="settings.play.buttons" />
             <small
               ><b>Max label length</b>: 30 characters<br />
-              <b>Max URL length</b>: 512 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
+              <b>Max URL length</b>: 512 characters</small
             >
           </div>
           <div
@@ -1674,17 +1706,30 @@
 
     <div :disabled="!settings.pause.enabled">
       <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+      <div class="arpc-option" v-if="flags?.activityTypes">
+        <div class="arpc-option-segment">
+          Activity Type
+          <small
+            v-if="flags?.discordTypeBugNotifText && settings.pause.type !== 'playing'"
+            >{{ flags.discordTypeBugNotifText }}</small
+          >
+        </div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <select class="arpc-select" v-model="settings.pause.type">
+              <option value="listening">Listening</option>
+              <option value="watching">Watching</option>
+              <option value="playing">Playing</option>
+              <option value="competing">Competing</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       <div class="arpc-option">
         <div class="arpc-option-segment">
           First Line
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -1696,18 +1741,26 @@
       <div class="arpc-option">
         <div class="arpc-option-segment">
           Second Line
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
             <input type="text" v-model="settings.pause.state" />
+          </label>
+        </div>
+      </div>
+
+      <div
+        class="arpc-option"
+        v-if="flags?.activityTypes && flags?.thirdLine && settings.pause.type !== 'playing'"
+      >
+        <div class="arpc-option-segment">
+          Third Line
+          <small>Max 128 characters</small>
+        </div>
+        <div class="arpc-option-segment arpc-option-segment_auto">
+          <label>
+            <input type="text" v-model="settings.pause.largeImageText" />
           </label>
         </div>
       </div>
@@ -1747,14 +1800,7 @@
         <div class="arpc-option-segment">
           <div v-if="flags?.categorizedOptions">Text</div>
           <div v-else>Large Image Text</div>
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -1798,14 +1844,7 @@
         <div class="arpc-option-segment">
           <div v-if="flags?.categorizedOptions">Text</div>
           <div v-else>Small Image Text</div>
-          <small
-            >Max 128 characters<br /><button
-              class="arpc-button arpc-var-button"
-              @click="$emit('do-action', 'modal.variables')"
-            >
-              {variables}
-            </button></small
-          >
+          <small>Max 128 characters</small>
         </div>
         <div class="arpc-option-segment arpc-option-segment_auto">
           <label>
@@ -1850,12 +1889,7 @@
               Buttons <br />
               <small
                 ><b>Max label length:</b> 30 characters<br />
-                <b>Max URL length:</b> 512 characters<br /><button
-                  class="arpc-button arpc-var-button"
-                  @click="$emit('do-action', 'modal.variables')"
-                >
-                  {variables}
-                </button></small
+                <b>Max URL length:</b> 512 characters</small
               >
             </div>
             <div
@@ -1912,7 +1946,7 @@
   Vue.component("arpc-podcasts", {
     props: ["data"],
     template: `
-  <div>
+<div>
   <div class="arpc-settings-header">
     <h2 @click="$emit('click-ee', 'podcastsClickEe')">Podcasts</h2>
     <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
@@ -1973,17 +2007,30 @@
         :disabled="podcasts.play.usePlayConfig && !(!podcasts.play.enabled || app.cfg.connectivity.discord_rpc.enabled || !enabled)"
       >
         <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+        <div class="arpc-option" v-if="flags?.activityTypes">
+          <div class="arpc-option-segment">
+            Activity Type
+            <small
+              v-if="flags?.discordTypeBugNotifText && podcasts.play.type !== 'playing'"
+              >{{ flags.discordTypeBugNotifText }}</small
+            >
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <select class="arpc-select" v-model="podcasts.play.type">
+                <option value="listening">Listening</option>
+                <option value="watching">Watching</option>
+                <option value="playing">Playing</option>
+                <option value="competing">Competing</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="arpc-option">
           <div class="arpc-option-segment">
             First Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -1995,18 +2042,26 @@
         <div class="arpc-option">
           <div class="arpc-option-segment">
             Second Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <input type="text" v-model="podcasts.play.state" />
+            </label>
+          </div>
+        </div>
+
+        <div
+          class="arpc-option"
+          v-if="flags?.activityTypes && flags?.thirdLine && podcasts.play.type !== 'playing'"
+        >
+          <div class="arpc-option-segment">
+            Third Line
+            <small>Max 128 characters</small>
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <input type="text" v-model="podcasts.play.largeImageText" />
             </label>
           </div>
         </div>
@@ -2063,14 +2118,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Large Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2118,14 +2166,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Small Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2151,12 +2192,7 @@
                 Buttons <br />
                 <small
                   ><b>Max label length:</b> 30 characters<br />
-                  <b>Max URL length:</b> 512 characters<br /><button
-                    class="arpc-button arpc-var-button"
-                    @click="$emit('do-action', 'modal.variables')"
-                  >
-                    {variables}
-                  </button></small
+                  <b>Max URL length:</b> 512 characters</small
                 >
               </div>
               <div
@@ -2224,17 +2260,30 @@
         :disabled="podcasts.pause.usePauseConfig && !(!podcasts.pause.enabled || !enabled || app.cfg.connectivity.discord_rpc.enabled)"
       >
         <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+        <div class="arpc-option" v-if="flags?.activityTypes">
+          <div class="arpc-option-segment">
+            Activity Type
+            <small
+              v-if="flags?.discordTypeBugNotifText && podcasts.pause.type !== 'playing'"
+              >{{ flags.discordTypeBugNotifText }}</small
+            >
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <select class="arpc-select" v-model="podcasts.pause.type">
+                <option value="listening">Listening</option>
+                <option value="watching">Watching</option>
+                <option value="playing">Playing</option>
+                <option value="competing">Competing</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="arpc-option">
           <div class="arpc-option-segment">
             First Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2246,18 +2295,26 @@
         <div class="arpc-option">
           <div class="arpc-option-segment">
             Second Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <input type="text" v-model="podcasts.pause.state" />
+            </label>
+          </div>
+        </div>
+
+        <div
+          class="arpc-option"
+          v-if="flags?.activityTypes && flags?.thirdLine && podcasts.pause.type !== 'playing'"
+        >
+          <div class="arpc-option-segment">
+            Third Line
+            <small>Max 128 characters</small>
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <input type="text" v-model="podcasts.pause.largeImageText" />
             </label>
           </div>
         </div>
@@ -2301,14 +2358,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Large Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2356,14 +2406,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Small Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2410,12 +2453,7 @@
                 Buttons <br />
                 <small
                   ><b>Max label length:</b> 30 characters<br />
-                  <b>Max URL length:</b> 512 characters<br /><button
-                    class="arpc-button arpc-var-button"
-                    @click="$emit('do-action', 'modal.variables')"
-                  >
-                    {variables}
-                  </button></small
+                  <b>Max URL length:</b> 512 characters</small
                 >
               </div>
               <div
@@ -2467,7 +2505,7 @@
   Vue.component("arpc-videos", {
     props: ["data"],
     template: `
-  <div>
+<div>
   <div class="arpc-settings-header">
     <h2 @click="$emit('click-ee', 'videosClickEe')">Videos</h2>
     <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
@@ -2524,17 +2562,30 @@
         :disabled="videos.play.usePlayConfig && !(!videos.play.enabled || app.cfg.connectivity.discord_rpc.enabled || !enabled)"
       >
         <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+        <div class="arpc-option" v-if="flags?.activityTypes">
+          <div class="arpc-option-segment">
+            Activity Type
+            <small
+              v-if="flags?.discordTypeBugNotifText && videos.play.type !== 'playing'"
+              >{{ flags.discordTypeBugNotifText }}</small
+            >
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <select class="arpc-select" v-model="videos.play.type">
+                <option value="listening">Listening</option>
+                <option value="watching">Watching</option>
+                <option value="playing">Playing</option>
+                <option value="competing">Competing</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="arpc-option">
           <div class="arpc-option-segment">
             First Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2546,18 +2597,26 @@
         <div class="arpc-option">
           <div class="arpc-option-segment">
             Second Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <input type="text" v-model="videos.play.state" />
+            </label>
+          </div>
+        </div>
+
+        <div
+          class="arpc-option"
+          v-if="flags?.activityTypes && flags?.thirdLine && videos.play.type !== 'playing'"
+        >
+          <div class="arpc-option-segment">
+            Third Line
+            <small>Max 128 characters</small>
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <input type="text" v-model="videos.play.largeImageText" />
             </label>
           </div>
         </div>
@@ -2611,14 +2670,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Large Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2663,14 +2715,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Small Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2696,12 +2741,7 @@
                 Buttons <br />
                 <small
                   ><b>Max label length:</b> 30 characters<br />
-                  <b>Max URL length:</b> 512 characters<br /><button
-                    class="arpc-button arpc-var-button"
-                    @click="$emit('do-action', 'modal.variables')"
-                  >
-                    {variables}
-                  </button></small
+                  <b>Max URL length:</b> 512 characters</small
                 >
               </div>
               <div
@@ -2769,17 +2809,30 @@
         :disabled="videos.pause.usePauseConfig && !(!videos.pause.enabled || !enabled || app.cfg.connectivity.discord_rpc.enabled)"
       >
         <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+        <div class="arpc-option" v-if="flags?.activityTypes">
+          <div class="arpc-option-segment">
+            Activity Type
+            <small
+              v-if="flags?.discordTypeBugNotifText && videos.pause.type !== 'playing'"
+              >{{ flags.discordTypeBugNotifText }}</small
+            >
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <select class="arpc-select" v-model="videos.pause.type">
+                <option value="listening">Listening</option>
+                <option value="watching">Watching</option>
+                <option value="playing">Playing</option>
+                <option value="competing">Competing</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="arpc-option">
           <div class="arpc-option-segment">
             First Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2791,18 +2844,26 @@
         <div class="arpc-option">
           <div class="arpc-option-segment">
             Second Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <input type="text" v-model="videos.pause.state" />
+            </label>
+          </div>
+        </div>
+
+        <div
+          class="arpc-option"
+          v-if="flags?.activityTypes && flags?.thirdLine && videos.pause.type !== 'playing'"
+        >
+          <div class="arpc-option-segment">
+            Third Line
+            <small>Max 128 characters</small>
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <input type="text" v-model="videos.pause.largeImageText" />
             </label>
           </div>
         </div>
@@ -2843,14 +2904,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Large Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2895,14 +2949,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Small Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -2949,12 +2996,7 @@
                 Buttons <br />
                 <small
                   ><b>Max label length:</b> 30 characters<br />
-                  <b>Max URL length:</b> 512 characters<br /><button
-                    class="arpc-button arpc-var-button"
-                    @click="$emit('do-action', 'modal.variables')"
-                  >
-                    {variables}
-                  </button></small
+                  <b>Max URL length:</b> 512 characters</small
                 >
               </div>
               <div
@@ -3006,7 +3048,7 @@
   Vue.component("arpc-radio", {
     props: ["data"],
     template: `
-  <div>
+<div>
   <div class="arpc-settings-header">
     <h2 @click="$emit('click-ee', 'radioClickEe')">Radio Stations</h2>
     <arpc-exit-button v-if="flags?.exitButton"></arpc-exit-button>
@@ -3045,17 +3087,30 @@
         :disabled="radio.usePlayConfig && !(!radio.enabled || app.cfg.connectivity.discord_rpc.enabled || !enabled)"
       >
         <div v-if="flags?.categorizedOptions" class="arpc-label">INFO</div>
+        <div class="arpc-option" v-if="flags?.activityTypes">
+          <div class="arpc-option-segment">
+            Activity Type
+            <small
+              v-if="flags?.discordTypeBugNotifText && radio.type !== 'playing'"
+              >{{ flags.discordTypeBugNotifText }}</small
+            >
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <select class="arpc-select" v-model="radio.type">
+                <option value="listening">Listening</option>
+                <option value="watching">Watching</option>
+                <option value="playing">Playing</option>
+                <option value="competing">Competing</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="arpc-option">
           <div class="arpc-option-segment">
             First Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -3067,18 +3122,26 @@
         <div class="arpc-option">
           <div class="arpc-option-segment">
             Second Line
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
               <input type="text" v-model="radio.state" />
+            </label>
+          </div>
+        </div>
+
+        <div
+          class="arpc-option"
+          v-if="flags?.activityTypes && flags?.thirdLine && radio.type !== 'playing'"
+        >
+          <div class="arpc-option-segment">
+            Third Line
+            <small>Max 128 characters</small>
+          </div>
+          <div class="arpc-option-segment arpc-option-segment_auto">
+            <label>
+              <input type="text" v-model="radio.largeImageText" />
             </label>
           </div>
         </div>
@@ -3131,14 +3194,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Large Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -3183,14 +3239,7 @@
           <div class="arpc-option-segment">
             <div v-if="flags?.categorizedOptions">Text</div>
             <div v-else>Small Image Text</div>
-            <small
-              >Max 128 characters<br /><button
-                class="arpc-button arpc-var-button"
-                @click="$emit('do-action', 'modal.variables')"
-              >
-                {variables}
-              </button></small
-            >
+            <small>Max 128 characters</small>
           </div>
           <div class="arpc-option-segment arpc-option-segment_auto">
             <label>
@@ -3237,12 +3286,7 @@
                 Buttons <br />
                 <small
                   ><b>Max label length:</b> 30 characters<br />
-                  <b>Max URL length:</b> 512 characters<br /><button
-                    class="arpc-button arpc-var-button"
-                    @click="$emit('do-action', 'modal.variables')"
-                  >
-                    {variables}
-                  </button></small
+                  <b>Max URL length:</b> 512 characters</small
                 >
               </div>
               <div
@@ -3397,11 +3441,12 @@
     FRONTEND_KEY = "frontend";
     remoteData = null;
     versionData = null;
-    installedVersion = "1.7.0";
-    versionDate = "August 9, 2023";
+    installedVersion = "1.7.1";
+    versionDate = "July 27, 2024";
     changelog = undefined;
     unappliedSettings = false;
     updateInProgress = false;
+    updateDownloaded = null;
     artworksUpdate = null;
     colorslessUpdate = null;
     isDev = false;
@@ -3466,10 +3511,13 @@
       if (!settings.removePause) settings["removePause"] = "0";
       if (typeof settings.removeInvalidButtons === "undefined") settings["removeInvalidButtons"] = true;
       if (typeof settings.icloudArtworks === "undefined") settings["icloudArtworks"] = true;
+      if (!settings.play.type) settings["play"]["type"] = "listening";
+      if (!settings.pause.type) settings["pause"]["type"] = "listening";
       if (!settings.podcasts) settings["podcasts"] = {
         play: {
           enabled: true,
           usePlayConfig: false,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           timestamp: "remaining",
@@ -3492,6 +3540,7 @@
         pause: {
           enabled: true,
           usePauseConfig: false,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           largeImage: "cover",
@@ -3512,10 +3561,13 @@
           }
         }
       };
+      if (!settings.podcasts.play.type) settings["podcasts"]["play"]["type"] = "listening";
+      if (!settings.podcasts.pause.type) settings["podcasts"]["pause"]["type"] = "listening";
       if (!settings.videos) settings["videos"] = {
         play: {
           enabled: true,
           usePlayConfig: false,
+          type: "watching",
           details: "{title}",
           state: "{artist}",
           timestamp: "remaining",
@@ -3538,6 +3590,7 @@
         pause: {
           enabled: true,
           usePauseConfig: false,
+          type: "watching",
           details: "{title}",
           state: "{artist}",
           largeImage: "cover",
@@ -3558,9 +3611,12 @@
           }
         }
       };
+      if (!settings.videos.play.type) settings["videos"]["play"]["type"] = "watching";
+      if (!settings.videos.pause.type) settings["videos"]["pause"]["type"] = "watching";
       if (!settings.radio) settings["radio"] = {
         enabled: true,
         usePlayConfig: false,
+        type: "listening",
         details: "{title}",
         state: "{artist}",
         timestamp: "elapsed",
@@ -3581,6 +3637,7 @@
           url: ""
         }
       };
+      if (!settings.radio.type) settings["radio"]["type"] = "listening";
       this.setSettings(settings);
     }
 
@@ -3592,6 +3649,7 @@
         respectPrivateSession: true,
         play: {
           enabled: true,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           timestamp: "remaining",
@@ -3614,6 +3672,7 @@
         },
         pause: {
           enabled: true,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           largeImage: "cover",
@@ -3637,6 +3696,7 @@
         radio: {
           enabled: true,
           usePlayConfig: false,
+          type: "listening",
           details: "{title}",
           state: "{artist}",
           timestamp: "elapsed",
@@ -3661,6 +3721,7 @@
           play: {
             enabled: true,
             usePlayConfig: false,
+            type: "listening",
             details: "{title}",
             state: "{artist}",
             timestamp: "remaining",
@@ -3683,6 +3744,7 @@
           pause: {
             enabled: true,
             usePauseConfig: false,
+            type: "listening",
             details: "{title}",
             state: "{artist}",
             largeImage: "cover",
@@ -3707,6 +3769,7 @@
           play: {
             enabled: true,
             usePlayConfig: false,
+            type: "watching",
             details: "{title}",
             state: "{artist}",
             timestamp: "remaining",
@@ -3729,6 +3792,7 @@
           pause: {
             enabled: true,
             usePauseConfig: false,
+            type: "watching",
             details: "{title}",
             state: "{artist}",
             largeImage: "cover",
@@ -3796,7 +3860,9 @@
           if (this.remoteData?.versionData) {
             this.versionData = this.remoteData.versionData;
             this.artworksUpdate = this.remoteData.versionData.artworksUpdate;
-            if (this.versionData.updateAvailable && this.versionData.updateNotif) {
+            const autoUpdateRemotely = this.remoteData?.flags?.autoUpdate && !this.remoteData?.flags?.autoUpdateOption;
+            const autoUpdateLocally = this.remoteData?.flags?.autoUpdate && this.remoteData?.flags?.autoUpdateOption && frontend.autoUpdate;
+            if (this.versionData.updateAvailable && this.versionData.updateNotif && !autoUpdateRemotely && !autoUpdateLocally) {
               const updateNotyf = notyf.error({
                 message: this.versionData.updateNotif.message || "There is a new AdvancedRPC version available!",
                 icon: false,
@@ -3812,6 +3878,10 @@
                 app.pluginPages.page = "plugin.advancedrpc";
                 window.location.hash = "plugin-renderer";
               });
+            }
+            if (autoUpdateRemotely || autoUpdateLocally) {
+              this.update(autoUpdateRemotely || autoUpdateLocally);
+              // notyf.success(`${autoUpdateRemotely || autoUpdateLocally}`);
             }
           } else {
             this.versionData = null;
@@ -3903,11 +3973,37 @@
       const promises = [this.getAnimatedArtworks(src), this.getChangelog(src), this.getColorsless(src)];
       await Promise.allSettled(promises);
     }
-    async update() {
+    async update(autoUpdate) {
+      if (!this.remoteData?.versionData?.updateAvailable) {
+        return;
+      }
+      if (this.remoteData?.versionData?.version === this.updateDownloaded) {
+        return;
+      }
       AdvancedRpc.updateInProgress = true;
       ipcRenderer.once("plugin-installed", (event, arg) => {
         if (arg.success) {
-          ipcRenderer.invoke("relaunchApp");
+          // ipcRenderer.invoke("relaunchApp");
+          AdvancedRpc.updateInProgress = false;
+          AdvancedRpc.updateDownloaded = this.versionData?.version;
+          if (autoUpdate && this.remoteData?.flags?.autoUpdateNotif) {
+            const updateNotyf = notyf.error({
+              message: this.remoteData?.flags?.autoUpdateNotifText || "New AdvancedRPC version available! Restart Cider to complete installation.",
+              icon: false,
+              background: "#5865f2",
+              duration: "10000",
+              dismissible: true
+            });
+            updateNotyf.on("click", ({
+              target,
+              event
+            }) => {
+              app.pluginPages.page = "plugin.advancedrpc";
+              window.location.hash = "plugin-renderer";
+            });
+          } else if (!autoUpdate) {
+            ipcRenderer.invoke("relaunchApp");
+          }
         } else {
           notyf.error("Error updating AdvancedRPC");
           AdvancedRpc.updateInProgress = false;
