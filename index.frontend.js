@@ -1,4 +1,4 @@
-/* Version: 1.7.1 - July 27, 2024 23:49:09 */
+/* Version: 1.7.2 - September 17, 2024 19:48:45 */
 (function () {
   'use strict';
 
@@ -651,7 +651,7 @@
       },
       installedVersion: AdvancedRpc.installedVersion,
       unappliedSettings: AdvancedRpc.unappliedSettings,
-      versionInfo: "ARPC 1.7.1 - July 27, 2024",
+      versionInfo: "ARPC 1.7.2 - September 17, 2024",
       textVariables: "{artist}, {composer}, {title}, {album}, {trackNumber}",
       urlVariables: "{appleMusicUrl}, {ciderUrl}",
       variableStyles: "{variable^} for uppercase, {variable*} for lowercase",
@@ -3441,8 +3441,8 @@
     FRONTEND_KEY = "frontend";
     remoteData = null;
     versionData = null;
-    installedVersion = "1.7.1";
-    versionDate = "July 27, 2024";
+    installedVersion = "1.7.2";
+    versionDate = "September 17, 2024";
     changelog = undefined;
     unappliedSettings = false;
     updateInProgress = false;
