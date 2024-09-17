@@ -28,6 +28,7 @@ module.exports = class AdvancedRpcBackend {
 
     this.updateTime = 0;
     this.startedTime = null;
+    this.endTime = null;
     this.pauseTime = Date.now();
 
     this.remoteData = {};
@@ -286,8 +287,12 @@ module.exports = class AdvancedRpcBackend {
           );
       } catch {}
 
-      this.startedTime = Date.now();
+      this.songDuration =
+        attributes.remainingTime + attributes.currentPlaybackTime * 1000;
+      this.startedTime =
+        Date.now() - Math.round(attributes.currentPlaybackTime) * 1000;
       this.pauseTime = Date.now();
+      this.endTime = Date.now() + Math.round(attributes.remainingTime);
       this.cleared = false;
     }
 
@@ -299,6 +304,16 @@ module.exports = class AdvancedRpcBackend {
           this.currentItem?.id !== attributes.songId))
     )
       return;
+
+    // Seek
+    if (
+      attributes.currentPlaybackTime !== prevAttributes?.currentPlaybackTime
+    ) {
+      this.startedTime = Date.now() - attributes.currentPlaybackTime * 1000;
+      this.endTime = Date.now() + attributes.remainingTime;
+      this.pauseTime = Date.now();
+      this.cleared = false;
+    }
 
     // Pause
     if (attributes.status !== prevAttributes?.status && !attributes.status) {
@@ -541,7 +556,7 @@ module.exports = class AdvancedRpcBackend {
           settings.timestamp === "remaining" &&
           attributes.kind !== "radioStation"
         )
-          activity.endTimestamp = attributes.endTime;
+          activity.endTimestamp = this.endTime;
       }
     }
 
